@@ -53,18 +53,33 @@ while true; do
     # --model opus: Primary agent uses Opus for complex reasoning (task selection, prioritization)
     #               Can use 'sonnet' in build mode for speed if plan is clear and tasks well-defined
     # --verbose: Detailed execution logging
-    cat "$PROMPT_FILE" | claude -p \
+    result=$(cat "$PROMPT_FILE" | claude -p \
         --dangerously-skip-permissions \
         --output-format=stream-json \
         --model opus \
-        --verbose
+        --verbose)
 
-    # Push changes after each iteration
-    git push origin "$CURRENT_BRANCH" || {
-        echo "Failed to push. Creating remote branch..."
-        git push -u origin "$CURRENT_BRANCH"
-    }
+    if [ $? -ne 0 ]; then
+        echo "Error: claude command failed with exit code $?"
+        break
+    fi
+
+    echo "$result"
 
     ITERATION=$((ITERATION + 1))
     echo -e "\n\n======================== LOOP $ITERATION ========================\n"
+
+    if [[ "$result" == *"<promise>COMPLETE</promise>"* ]]; then
+        echo "Task complete after $ITERATION iterations."
+        exit 0
+    fi
+
+    # Push changes after each iteration
+    git push origin "$CURRENT_BRANCH" 2>/dev/null || {
+        echo "Failed to push. Creating remote branch..."
+        git push -u origin "$CURRENT_BRANCH" || {
+            echo "Error: Failed to push to remote"
+            break
+        }
+    }
 done
