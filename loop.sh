@@ -1,56 +1,70 @@
-#!/usr/bin/env bash
-# ============================================================
-# RALPH Loop - The Engine
-# ============================================================
-# Usage:
-#   ./loop.sh plan        Run planning mode (analyzes specs, creates task list)
-#   ./loop.sh build       Run building mode (implements one task per loop)
-#   ./loop.sh build 10    Run building mode, max 10 iterations
-# ============================================================
+#!/bin/bash
+# Usage: ./loop.sh [plan] [max_iterations]
+# Examples:
+#   ./loop.sh              # Build mode, unlimited tasks
+#   ./loop.sh 20           # Build mode, max 20 tasks
+#   ./loop.sh plan         # Plan mode, unlimited tasks
+#   ./loop.sh plan 5       # Plan mode, max 5 tasks
 
-set -euo pipefail
-
-MODE="${1:-build}"
-MAX_ITERATIONS="${2:-0}"
-COUNT=0
-
-if [[ "$MODE" != "plan" && "$MODE" != "build" ]]; then
-  echo "Usage: ./loop.sh [plan|build] [max_iterations]"
-  exit 1
+# Parse arguments
+if [ "$1" = "plan" ]; then
+    # Plan mode
+    MODE="plan"
+    PROMPT_FILE="PROMPT_plan.md"
+    MAX_ITERATIONS=${2:-0}
+elif [[ "$1" =~ ^[0-9]+$ ]]; then
+    # Build mode with max tasks
+    MODE="build"
+    PROMPT_FILE="PROMPT_build.md"
+    MAX_ITERATIONS=$1
+else
+    # Build mode, unlimited
+    MODE="build"
+    PROMPT_FILE="PROMPT_build.md"
+    MAX_ITERATIONS=0
 fi
 
-PROMPT_FILE="PROMPT_${MODE}.md"
+ITERATION=0
+CURRENT_BRANCH=$(git branch --show-current)
 
-if [[ ! -f "$PROMPT_FILE" ]]; then
-  echo "Error: $PROMPT_FILE not found"
-  exit 1
-fi
-
-echo "=== RALPH Loop ==="
-echo "Mode: $MODE"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "Mode:   $MODE"
 echo "Prompt: $PROMPT_FILE"
-if [[ "$MAX_ITERATIONS" -gt 0 ]]; then
-  echo "Max iterations: $MAX_ITERATIONS"
+echo "Branch: $CURRENT_BRANCH"
+[ $MAX_ITERATIONS -gt 0 ] && echo "Max:    $MAX_ITERATIONS iterations"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+# Verify prompt file exists
+if [ ! -f "$PROMPT_FILE" ]; then
+    echo "Error: $PROMPT_FILE not found"
+    exit 1
 fi
-echo "==================="
-echo ""
 
 while true; do
-  COUNT=$((COUNT + 1))
-  echo ""
-  echo "--- Iteration $COUNT ---"
-  echo ""
+    if [ $MAX_ITERATIONS -gt 0 ] && [ $ITERATION -ge $MAX_ITERATIONS ]; then
+        echo "Reached max iterations: $MAX_ITERATIONS"
+        break
+    fi
 
-  # Feed the prompt to Claude and let it work
-  cat "$PROMPT_FILE" | claude -p --verbose
+    # Run Ralph iteration with selected prompt
+    # -p: Headless mode (non-interactive, reads from stdin)
+    # --dangerously-skip-permissions: Auto-approve all tool calls (YOLO mode)
+    # --output-format=stream-json: Structured output for logging/monitoring
+    # --model opus: Primary agent uses Opus for complex reasoning (task selection, prioritization)
+    #               Can use 'sonnet' in build mode for speed if plan is clear and tasks well-defined
+    # --verbose: Detailed execution logging
+    cat "$PROMPT_FILE" | claude -p \
+        --dangerously-skip-permissions \
+        --output-format=stream-json \
+        --model opus \
+        --verbose
 
-  # Check iteration limit
-  if [[ "$MAX_ITERATIONS" -gt 0 && "$COUNT" -ge "$MAX_ITERATIONS" ]]; then
-    echo ""
-    echo "=== Reached max iterations ($MAX_ITERATIONS). Stopping. ==="
-    break
-  fi
+    # Push changes after each iteration
+    git push origin "$CURRENT_BRANCH" || {
+        echo "Failed to push. Creating remote branch..."
+        git push -u origin "$CURRENT_BRANCH"
+    }
 
-  echo ""
-  echo "--- Iteration $COUNT complete. Starting next... ---"
+    ITERATION=$((ITERATION + 1))
+    echo -e "\n\n======================== LOOP $ITERATION ========================\n"
 done
