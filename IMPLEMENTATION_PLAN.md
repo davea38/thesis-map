@@ -64,23 +64,23 @@ The following gaps were identified and addressed in this revision:
 ### 3. Map Management API (spec: 002)
 > Maps are the top-level entity; nodes, tags, and attachments all live inside maps.
 
-- [ ] **3.1** Create a tRPC `map` router with a `map.create` procedure: accepts name and thesisStatement (both required), creates the Map row and a root Node (statement = thesis, polarity = null, strength = null, parentId = null) in a single transaction, returns the created map with its root node.
+- [x] **3.1** Create a tRPC `map` router with a `map.create` procedure: accepts name and thesisStatement (both required), creates the Map row and a root Node (statement = thesis, polarity = null, strength = null, parentId = null) in a single transaction, returns the created map with its root node.
   — *Why: Spec 002 requires both fields on creation, and spec 003 requires the thesis to become the root node. A transaction ensures atomicity — no orphan maps or nodes.*
 
-- [ ] **3.2** Add a `map.list` procedure: returns all maps sorted by `updatedAt` descending, including name, thesisStatement, createdAt, and updatedAt.
+- [x] **3.2** Add a `map.list` procedure: returns all maps sorted by `updatedAt` descending, including name, thesisStatement, createdAt, and updatedAt.
   — *Why: The landing page displays maps sorted by last-modified. This is the first data the user sees.*
 
-- [ ] **3.3** Add a `map.getById` procedure: returns a single map with its full node tree (all nodes with children, tags, attachments, and computed aggregation data), structured for the canvas to render.
+- [x] **3.3** Add a `map.getById` procedure: returns a single map with its full node tree (all nodes with children, tags, attachments, and computed aggregation data), structured for the canvas to render.
   — *Why: The map view needs the entire tree in one request to render the radial layout. Including aggregation data avoids extra round-trips.*
 
-- [ ] **3.4** Add a `map.update` procedure: allows updating the map name. Validates that name is non-empty.
+- [x] **3.4** Add a `map.update` procedure: allows updating the map name. Validates that name is non-empty.
   — *Why: Spec 002 says the map name can be edited from the landing page or map view. Thesis statement editing is handled via root node update (task 4.3).*
 
-- [ ] **3.5** Add a `map.delete` procedure: deletes the map and all associated data (nodes, tags, node-tags, attachments) via Prisma cascades. Returns success confirmation.
+- [x] **3.5** Add a `map.delete` procedure: deletes the map and all associated data (nodes, tags, node-tags, attachments) via Prisma cascades. Returns success confirmation.
   — *Why: Spec 002 requires map deletion to remove everything. Cascades handle cleanup, but we verify it works end-to-end.*
 
-- [ ] **3.6** Implement `Map.updatedAt` auto-bumping: whenever any child entity (node, tag, attachment, node-tag) within the map is created, updated, or deleted, update the parent map's `updatedAt` timestamp. Use Prisma middleware or explicit updates in each mutation.
-  — *Why: Spec 002 defines "Last modified" as "the most recent edit to the map or any of its nodes." The landing page sorts by this field, so it must reflect all activity within the map.*
+- [x] **3.6** Implement `Map.updatedAt` auto-bumping: whenever any child entity (node, tag, attachment, node-tag) within the map is created, updated, or deleted, update the parent map's `updatedAt` timestamp. Use Prisma middleware or explicit updates in each mutation.
+  — *Why: Spec 002 defines "Last modified" as "the most recent edit to the map or any of its nodes." The landing page sorts by this field, so it must reflect all activity within the map.* *(Implemented as a reusable `bumpMapUpdatedAt` utility in `server/src/lib/bump-map-updated.ts` for explicit use in mutation handlers.)*
 
 ### 4. Node CRUD API (specs: 003, 004, 006)
 > Nodes are the core data unit; hierarchy, polarity, attachments, and aggregation all depend on nodes existing.
