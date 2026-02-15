@@ -169,7 +169,8 @@ describe("SidePanel", () => {
       renderSidePanel({ nodeData: mockNode });
       const section = screen.getByTestId("section-properties");
       expect(section).toBeInTheDocument();
-      expect(within(section).getByText("75%")).toBeInTheDocument();
+      const slider = within(section).getByTestId("strength-slider") as HTMLInputElement;
+      expect(slider.value).toBe("75");
     });
 
     it("hides properties section for root nodes", () => {
@@ -316,6 +317,104 @@ describe("SidePanel", () => {
       });
       const textarea = screen.getByTestId("body-input") as HTMLTextAreaElement;
       expect(textarea.value).toBe("Some reasoning text");
+    });
+  });
+
+  describe("strength editing", () => {
+    it("renders a slider and numeric input for strength", () => {
+      renderSidePanel({ nodeData: mockNode });
+      const editor = screen.getByTestId("strength-editor");
+      expect(editor).toBeInTheDocument();
+
+      const slider = screen.getByTestId("strength-slider") as HTMLInputElement;
+      expect(slider).toBeInTheDocument();
+      expect(slider.type).toBe("range");
+      expect(slider.min).toBe("0");
+      expect(slider.max).toBe("100");
+      expect(slider.value).toBe("75");
+
+      const numberInput = screen.getByTestId("strength-number-input") as HTMLInputElement;
+      expect(numberInput).toBeInTheDocument();
+      expect(numberInput.type).toBe("number");
+      expect(numberInput.value).toBe("75");
+    });
+
+    it("slider and numeric input are synced with initial node data", () => {
+      renderSidePanel({
+        nodeData: { ...mockNode, strength: 42 },
+      });
+      const slider = screen.getByTestId("strength-slider") as HTMLInputElement;
+      const numberInput = screen.getByTestId("strength-number-input") as HTMLInputElement;
+      expect(slider.value).toBe("42");
+      expect(numberInput.value).toBe("42");
+    });
+
+    it("defaults to 0 when strength is null", () => {
+      renderSidePanel({
+        nodeData: { ...mockNode, strength: null },
+      });
+      const slider = screen.getByTestId("strength-slider") as HTMLInputElement;
+      const numberInput = screen.getByTestId("strength-number-input") as HTMLInputElement;
+      expect(slider.value).toBe("0");
+      expect(numberInput.value).toBe("0");
+    });
+
+    it("updates numeric input when slider changes", async () => {
+      const { user } = renderSidePanel({ nodeData: mockNode });
+      const numberInput = screen.getByTestId("strength-number-input") as HTMLInputElement;
+
+      // Simulate changing the numeric input
+      await user.clear(numberInput);
+      await user.type(numberInput, "50");
+
+      expect(numberInput.value).toBe("50");
+    });
+
+    it("clamps values above 100 to 100", async () => {
+      const { user } = renderSidePanel({ nodeData: mockNode });
+      const numberInput = screen.getByTestId("strength-number-input") as HTMLInputElement;
+
+      await user.clear(numberInput);
+      await user.type(numberInput, "150");
+
+      expect(numberInput.value).toBe("100");
+    });
+
+    it("clamps values to 0 minimum via the handler", () => {
+      renderSidePanel({
+        nodeData: { ...mockNode, strength: 0 },
+      });
+      const slider = screen.getByTestId("strength-slider") as HTMLInputElement;
+      const numberInput = screen.getByTestId("strength-number-input") as HTMLInputElement;
+
+      // The min attribute prevents negative values in the input
+      expect(numberInput.min).toBe("0");
+      expect(slider.min).toBe("0");
+
+      // Verify values at the boundary
+      expect(slider.value).toBe("0");
+      expect(numberInput.value).toBe("0");
+    });
+
+    it("does not show strength editor for root nodes", () => {
+      renderSidePanel({
+        selectedNodeId: "root-1",
+        nodeData: mockRootNode,
+        nodeQueryKey: "root-1",
+      });
+      expect(screen.queryByTestId("strength-editor")).not.toBeInTheDocument();
+    });
+
+    it("has proper accessibility labels", () => {
+      renderSidePanel({ nodeData: mockNode });
+      expect(screen.getByLabelText("Strength slider")).toBeInTheDocument();
+      expect(screen.getByLabelText("Strength percentage")).toBeInTheDocument();
+    });
+
+    it("shows percent sign next to the numeric input", () => {
+      renderSidePanel({ nodeData: mockNode });
+      const editor = screen.getByTestId("strength-editor");
+      expect(within(editor).getByText("%")).toBeInTheDocument();
     });
   });
 

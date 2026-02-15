@@ -246,8 +246,8 @@ The following gaps were identified and addressed in this revision:
 - [x] **13.3** Add the body editing section: a multi-line text area for the node's free-text body field, with autosave. Label clearly distinguishes it from note attachments (e.g., "Primary Reasoning" or "Body").
   — *Why: Spec 008 emphasizes the body vs. note distinction — body is the author's primary reasoning, notes are supplementary. Clear labeling prevents confusion.* *(Replaced read-only `<p>` with a resizable `<textarea>` backed by `useDebouncedMutation` (1500ms delay). Local state syncs with server data via `useEffect`. Labeled "Primary Reasoning" to distinguish from note attachments per spec 008. On success, invalidates both `node.getById` and `map.getById` caches. Body editing available for all nodes including root. 6 new tests added.)*
 
-- [ ] **13.4** Add the strength editing section: a slider (0-100%) and a numeric input (synced), with autosave. Hidden entirely when the selected node is the root node.
-  — *Why: Strength drives aggregation. Hiding for root enforces spec 003 constraint that root has no strength.*
+- [x] **13.4** Add the strength editing section: a slider (0-100%) and a numeric input (synced), with autosave. Hidden entirely when the selected node is the root node.
+  — *Why: Strength drives aggregation. Hiding for root enforces spec 003 constraint that root has no strength.* *(Replaced read-only strength display with an interactive range slider and synced numeric input. Both are backed by `useDebouncedMutation` (500ms delay for responsive slider feel). Values clamped to 0-100 integer range. Local state syncs with server data via `useEffect`. Hidden for root nodes. 9 new tests in `side-panel.test.tsx`.)*
 
 - [ ] **13.5** Add the polarity selector: three options (tailwind/headwind/neutral) with polarity color-coding, with autosave. Hidden entirely when the selected node is the root node.
   — *Why: Polarity drives aggregation and visual coding. Hiding for root enforces spec 003/006 constraints.*

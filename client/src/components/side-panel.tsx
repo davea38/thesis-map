@@ -46,12 +46,15 @@ export function SidePanel() {
   const [statementValue, setStatementValue] = useState("");
   // Body editing state
   const [bodyValue, setBodyValue] = useState("");
+  // Strength editing state
+  const [strengthValue, setStrengthValue] = useState(0);
 
   // Sync local state with server data when node changes
   useEffect(() => {
     if (nodeData) {
       setStatementValue(nodeData.statement);
       setBodyValue(nodeData.body);
+      setStrengthValue(nodeData.strength ?? 0);
     }
   }, [nodeData]);
 
@@ -67,6 +70,14 @@ export function SidePanel() {
 
   const debouncedBodyUpdate = useDebouncedMutation(updateNodeMutation, {
     delay: 1500,
+    onSuccess: () => {
+      utils.node.getById.invalidate();
+      utils.map.getById.invalidate();
+    },
+  });
+
+  const debouncedStrengthUpdate = useDebouncedMutation(updateNodeMutation, {
+    delay: 500,
     onSuccess: () => {
       utils.node.getById.invalidate();
       utils.map.getById.invalidate();
@@ -91,6 +102,17 @@ export function SidePanel() {
       }
     },
     [selectedNodeId, debouncedBodyUpdate],
+  );
+
+  const handleStrengthChange = useCallback(
+    (value: number) => {
+      const clamped = Math.max(0, Math.min(100, Math.round(value)));
+      setStrengthValue(clamped);
+      if (selectedNodeId) {
+        debouncedStrengthUpdate.mutate({ id: selectedNodeId, strength: clamped });
+      }
+    },
+    [selectedNodeId, debouncedStrengthUpdate],
   );
 
   if (!sidePanelOpen || !selectedNodeId) {
@@ -210,10 +232,49 @@ export function SidePanel() {
                   <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
                     Properties
                   </h3>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Strength</span>
-                      <span>{node.strength ?? 0}%</span>
+                  <div className="space-y-4 text-sm">
+                    {/* Strength slider + numeric input */}
+                    <div data-testid="strength-editor">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label
+                          htmlFor="strength-slider"
+                          className="text-muted-foreground"
+                        >
+                          Strength
+                        </label>
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="number"
+                            min={0}
+                            max={100}
+                            value={strengthValue}
+                            onChange={(e) => {
+                              const raw = e.target.value;
+                              if (raw === "") {
+                                setStrengthValue(0);
+                                return;
+                              }
+                              handleStrengthChange(parseInt(raw, 10));
+                            }}
+                            className="w-14 rounded border border-border bg-transparent px-1.5 py-0.5 text-sm text-right outline-none focus:border-ring focus:ring-1 focus:ring-ring [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                            data-testid="strength-number-input"
+                            aria-label="Strength percentage"
+                          />
+                          <span className="text-muted-foreground">%</span>
+                        </div>
+                      </div>
+                      <input
+                        id="strength-slider"
+                        type="range"
+                        min={0}
+                        max={100}
+                        step={1}
+                        value={strengthValue}
+                        onChange={(e) => handleStrengthChange(parseInt(e.target.value, 10))}
+                        className="w-full h-2 rounded-full appearance-none cursor-pointer accent-primary bg-muted"
+                        data-testid="strength-slider"
+                        aria-label="Strength slider"
+                      />
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-muted-foreground">Polarity</span>
