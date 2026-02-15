@@ -35,3 +35,7 @@
 - Vitest v4 is the test runner for both packages. Server tests use `environment: "node"`, client tests use `environment: "jsdom"` with `@testing-library/react`.
 - Client test setup file (`src/test-setup.ts`) imports `@testing-library/jest-dom/vitest` for DOM matchers.
 - Server tests can use `appRouter.createCaller({})` to test tRPC procedures without HTTP.
+- Prisma v7.4.0 requires a driver adapter — use `@prisma/adapter-pg` with `PrismaPg` for PostgreSQL. `new PrismaClient({})` no longer works; must pass `{ adapter }`.
+- Prisma schema lives at `server/prisma/schema.prisma`. Generated client at `server/src/generated/prisma/` (gitignored). Shared instance in `server/src/db.ts`.
+- `prisma.config.ts` in `server/` loads `DATABASE_URL` from `.env` via `dotenv/config`.
+- Run `bun run db:generate` in server/ to regenerate Prisma client after schema changes.

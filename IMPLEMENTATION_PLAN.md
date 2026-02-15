@@ -47,7 +47,7 @@ The following gaps were identified and addressed in this revision:
 ### 2. Database & Schema (specs: 002, 003, 004, 005, 006, 008, 012)
 > Data models must exist before any CRUD logic. The schema is the single source of truth for all data.
 
-- [ ] **2.1** Install Prisma in `server/`, configure it for PostgreSQL (connection string via environment variable), and create the initial `schema.prisma` with all models:
+- [x] **2.1** Install Prisma in `server/`, configure it for PostgreSQL (connection string via environment variable), and create the initial `schema.prisma` with all models:
   - `Map` (id, name, thesisStatement, createdAt, updatedAt)
   - `Node` (id, mapId FK, parentId nullable self-relation, statement String NOT NULL default "", body String NOT NULL default "", strength Int nullable — null for root / default 0 for non-root, polarity String nullable — null for root / default "neutral" for non-root, createdAt, updatedAt, orderIndex Int default 0). Cascade: delete Map cascades to all Nodes.
   - `Tag` (id, mapId FK, name String, color String) with `@@unique([mapId, name])`. Cascade: delete Map cascades to all Tags.
@@ -55,10 +55,10 @@ The following gaps were identified and addressed in this revision:
   - `Attachment` (id, nodeId FK, type String — "source" or "note", url String nullable, sourceType String nullable default "url", noteText String nullable, previewTitle String nullable, previewDescription String nullable, previewImageUrl String nullable, previewFaviconUrl String nullable, previewSiteName String nullable, previewFetchStatus String nullable default "pending", previewFetchedAt DateTime nullable, previewFetchError String nullable, createdAt, orderIndex Int default 0). Cascade: delete Node cascades to Attachments.
   — *Why: The Prisma schema defines every table the app uses. Cascade rules must be correct from the start so that deleting a map, node, or tag properly cleans up related data. Source attachments include preview metadata fields per spec 012.*
 
-- [ ] **2.2** Run `prisma migrate dev` to generate and apply the initial migration; verify the database is reachable and all tables are created correctly.
+- [ ] **2.2** Run `prisma migrate dev` to generate and apply the initial migration; verify the database is reachable and all tables are created correctly. *(Requires a running PostgreSQL instance.)*
   — *Why: Confirms the schema is valid and the database connection is functional before writing any application code against it.*
 
-- [ ] **2.3** Generate the Prisma client and create a shared database client instance (`db.ts`) that server code imports.
+- [x] **2.3** Generate the Prisma client and create a shared database client instance (`db.ts`) that server code imports.
   — *Why: A single Prisma client instance ensures connection pooling and consistent access patterns across all server-side code.*
 
 ### 3. Map Management API (spec: 002)

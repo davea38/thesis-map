@@ -1,0 +1,86 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Map {
+  id             String   @id @default(cuid())
+  name           String
+  thesisStatement String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  nodes Node[]
+  tags  Tag[]
+}
+
+model Node {
+  id         String   @id @default(cuid())
+  mapId      String
+  parentId   String?
+  statement  String   @default("")
+  body       String   @default("")
+  strength   Int?
+  polarity   String?
+  orderIndex Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  map         Map          @relation(fields: [mapId], references: [id], onDelete: Cascade)
+  parent      Node?        @relation("NodeTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children    Node[]       @relation("NodeTree")
+  nodeTags    NodeTag[]
+  attachments Attachment[]
+
+  @@index([mapId])
+  @@index([parentId])
+}
+
+model Tag {
+  id    String @id @default(cuid())
+  mapId String
+  name  String
+  color String
+
+  map      Map       @relation(fields: [mapId], references: [id], onDelete: Cascade)
+  nodeTags NodeTag[]
+
+  @@unique([mapId, name])
+}
+
+model NodeTag {
+  nodeId String
+  tagId  String
+
+  node Node @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+  tag  Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([nodeId, tagId])
+}
+
+model Attachment {
+  id                    String    @id @default(cuid())
+  nodeId                String
+  type                  String
+  url                   String?
+  sourceType            String?   @default("url")
+  noteText              String?
+  previewTitle          String?
+  previewDescription    String?
+  previewImageUrl       String?
+  previewFaviconUrl     String?
+  previewSiteName       String?
+  previewFetchStatus    String?   @default("pending")
+  previewFetchedAt      DateTime?
+  previewFetchError     String?
+  orderIndex            Int       @default(0)
+  createdAt             DateTime  @default(now())
+
+  node Node @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+
+  @@index([nodeId])
+}
