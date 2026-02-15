@@ -8,6 +8,7 @@ import {
 import "@xyflow/react/dist/style.css";
 import { trpc } from "@/lib/trpc";
 import { computeRadialLayout } from "@/lib/radial-layout";
+import { ThesisNode } from "@/components/thesis-node";
 
 type MapNode = {
   id: string;
@@ -29,6 +30,8 @@ type MapNode = {
     balanceRatio: number;
   } | null;
 };
+
+const nodeTypes = { thesis: ThesisNode };
 
 export function MapView() {
   const { id } = useParams<{ id: string }>();
@@ -81,6 +84,7 @@ export function MapView() {
       <ReactFlow
         nodes={rfNodes}
         edges={rfEdges}
+        nodeTypes={nodeTypes}
         fitView
         fitViewOptions={{ padding: 0.3 }}
         minZoom={0.1}

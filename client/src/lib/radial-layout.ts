@@ -115,6 +115,7 @@ export function computeRadialLayout(nodes: LayoutNode[]): {
   // Place root at center
   rfNodes.push({
     id: root.node.id,
+    type: "thesis",
     position: { x: -NODE_WIDTH / 2, y: -NODE_HEIGHT / 2 },
     data: {
       label: root.node.statement || "(untitled)",
@@ -228,6 +229,7 @@ function layoutChildren(
 
     rfNodes.push({
       id: child.node.id,
+      type: "thesis",
       position: { x: x - NODE_WIDTH / 2, y: y - NODE_HEIGHT / 2 },
       data: {
         label: child.node.statement || "(untitled)",
