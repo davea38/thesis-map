@@ -4,113 +4,10 @@ import {
   ReactFlow,
   Background,
   Controls,
-  type Node as RFNode,
-  type Edge as RFEdge,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { trpc } from "@/lib/trpc";
-
-/**
- * Simple radial layout: root at center, children in concentric rings.
- * This is a basic version — task 11.2 will replace it with a proper
- * auto-spacing radial algorithm.
- */
-function computeLayout(
-  nodes: MapNode[],
-): { rfNodes: RFNode[]; rfEdges: RFEdge[] } {
-  if (nodes.length === 0) {
-    return { rfNodes: [], rfEdges: [] };
-  }
-
-  // Build parent -> children lookup
-  const childrenMap = new Map<string | null, MapNode[]>();
-  let rootNode: MapNode | undefined;
-
-  for (const node of nodes) {
-    if (node.parentId === null) {
-      rootNode = node;
-    }
-    const parentId = node.parentId;
-    const siblings = childrenMap.get(parentId) ?? [];
-    siblings.push(node);
-    childrenMap.set(parentId, siblings);
-  }
-
-  if (!rootNode) {
-    return { rfNodes: [], rfEdges: [] };
-  }
-
-  const rfNodes: RFNode[] = [];
-  const rfEdges: RFEdge[] = [];
-
-  const RING_RADIUS = 250;
-  const NODE_WIDTH = 200;
-  const NODE_HEIGHT = 60;
-
-  // BFS to assign positions in concentric rings
-  type QueueItem = { node: MapNode; depth: number; angleStart: number; angleEnd: number };
-  const queue: QueueItem[] = [
-    { node: rootNode, depth: 0, angleStart: 0, angleEnd: 2 * Math.PI },
-  ];
-
-  while (queue.length > 0) {
-    const item = queue.shift()!;
-    const { node, depth, angleStart, angleEnd } = item;
-
-    // Position
-    let x: number;
-    let y: number;
-
-    if (depth === 0) {
-      x = 0;
-      y = 0;
-    } else {
-      const angle = (angleStart + angleEnd) / 2;
-      const radius = depth * RING_RADIUS;
-      x = Math.cos(angle) * radius;
-      y = Math.sin(angle) * radius;
-    }
-
-    rfNodes.push({
-      id: node.id,
-      position: { x: x - NODE_WIDTH / 2, y: y - NODE_HEIGHT / 2 },
-      data: {
-        label: node.statement || "(untitled)",
-        node,
-      },
-      style: {
-        width: NODE_WIDTH,
-        minHeight: NODE_HEIGHT,
-      },
-    });
-
-    // Edge from parent
-    if (node.parentId) {
-      rfEdges.push({
-        id: `edge-${node.parentId}-${node.id}`,
-        source: node.parentId,
-        target: node.id,
-        type: "default",
-      });
-    }
-
-    // Queue children with evenly divided arc
-    const children = childrenMap.get(node.id) ?? [];
-    if (children.length > 0) {
-      const arcPerChild = (angleEnd - angleStart) / children.length;
-      children.forEach((child, i) => {
-        queue.push({
-          node: child,
-          depth: depth + 1,
-          angleStart: angleStart + i * arcPerChild,
-          angleEnd: angleStart + (i + 1) * arcPerChild,
-        });
-      });
-    }
-  }
-
-  return { rfNodes, rfEdges };
-}
+import { computeRadialLayout } from "@/lib/radial-layout";
 
 type MapNode = {
   id: string;
@@ -143,7 +40,7 @@ export function MapView() {
 
   const { rfNodes, rfEdges } = useMemo(() => {
     if (!map) return { rfNodes: [], rfEdges: [] };
-    return computeLayout(map.nodes as MapNode[]);
+    return computeRadialLayout(map.nodes as MapNode[]);
   }, [map]);
 
   if (isLoading) {
