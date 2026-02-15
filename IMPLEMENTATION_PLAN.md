@@ -32,7 +32,7 @@ The following gaps were identified and addressed in this revision:
 - [x] **1.2** Scaffold the `server/` directory: create `package.json`, install Fastify, `@trpc/server`, Zod, and TypeScript; add `tsconfig.json`; create a minimal `src/index.ts` entry point that starts a Fastify server with a tRPC health-check endpoint.
   — *Why: The backend must exist before we can define API routes, connect a database, or serve data to the frontend.*
 
-- [ ] **1.3** Scaffold the `client/` directory: create a Vite + React + TypeScript project, install Tailwind CSS and configure it, initialize shadcn/ui, and create a minimal page that renders in the browser.
+- [x] **1.3** Scaffold the `client/` directory: create a Vite + React + TypeScript project, install Tailwind CSS and configure it, initialize shadcn/ui, and create a minimal page that renders in the browser.
   — *Why: The frontend must exist before we can build any UI components or pages.*
 
 - [ ] **1.4** Wire the tRPC client in `client/` to the tRPC server in `server/`: install `@trpc/client`, `@trpc/react-query`, `@tanstack/react-query`; create a tRPC provider wrapping the app; confirm end-to-end type-safe communication by calling the health-check procedure from the client.

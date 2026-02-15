@@ -10,5 +10,10 @@
     "build": "bun run --filter '*' build",
     "test": "bun run --filter '*' test",
     "lint": "bun run --filter '*' lint"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.18",
+    "client": "workspace:*",
+    "tailwindcss": "^4.1.18"
   }
 }
