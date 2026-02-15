@@ -156,10 +156,13 @@ describe("SidePanel", () => {
       expect(input.value).toBe("Test statement");
     });
 
-    it("shows body section", () => {
+    it("shows body section with body textarea", () => {
       renderSidePanel({ nodeData: mockNode });
-      expect(screen.getByTestId("section-body")).toBeInTheDocument();
-      expect(screen.getByText("Test body content")).toBeInTheDocument();
+      const section = screen.getByTestId("section-body");
+      expect(section).toBeInTheDocument();
+      const textarea = within(section).getByTestId("body-input") as HTMLTextAreaElement;
+      expect(textarea).toBeInTheDocument();
+      expect(textarea.value).toBe("Test body content");
     });
 
     it("shows properties section for non-root nodes", () => {
@@ -263,6 +266,56 @@ describe("SidePanel", () => {
       });
       const input = screen.getByTestId("statement-input") as HTMLInputElement;
       expect(input.value).toBe("This is the thesis");
+    });
+  });
+
+  describe("body editing", () => {
+    it("renders a textarea for the body", () => {
+      renderSidePanel({ nodeData: mockNode });
+      const textarea = screen.getByTestId("body-input") as HTMLTextAreaElement;
+      expect(textarea).toBeInTheDocument();
+      expect(textarea.tagName).toBe("TEXTAREA");
+      expect(textarea.value).toBe("Test body content");
+    });
+
+    it("allows typing in the body textarea", async () => {
+      const { user } = renderSidePanel({ nodeData: mockNode });
+      const textarea = screen.getByTestId("body-input") as HTMLTextAreaElement;
+
+      await user.clear(textarea);
+      await user.type(textarea, "Updated body text");
+
+      expect(textarea.value).toBe("Updated body text");
+    });
+
+    it("shows placeholder when body is empty", () => {
+      renderSidePanel({ nodeData: { ...mockNode, body: "" } });
+      const textarea = screen.getByTestId("body-input") as HTMLTextAreaElement;
+      expect(textarea.placeholder).toBe("Enter your reasoning...");
+    });
+
+    it("labels the body section as 'Primary Reasoning'", () => {
+      renderSidePanel({ nodeData: mockNode });
+      const section = screen.getByTestId("section-body");
+      expect(within(section).getByText("Primary Reasoning")).toBeInTheDocument();
+    });
+
+    it("renders body textarea for root nodes too", () => {
+      renderSidePanel({
+        selectedNodeId: "root-1",
+        nodeData: mockRootNode,
+        nodeQueryKey: "root-1",
+      });
+      const textarea = screen.getByTestId("body-input") as HTMLTextAreaElement;
+      expect(textarea).toBeInTheDocument();
+    });
+
+    it("pre-fills body value from node data", () => {
+      renderSidePanel({
+        nodeData: { ...mockNode, body: "Some reasoning text" },
+      });
+      const textarea = screen.getByTestId("body-input") as HTMLTextAreaElement;
+      expect(textarea.value).toBe("Some reasoning text");
     });
   });
 

@@ -44,17 +44,28 @@ export function SidePanel() {
 
   // Statement editing state
   const [statementValue, setStatementValue] = useState("");
+  // Body editing state
+  const [bodyValue, setBodyValue] = useState("");
 
-  // Sync local statement with server data when node changes
+  // Sync local state with server data when node changes
   useEffect(() => {
     if (nodeData) {
       setStatementValue(nodeData.statement);
+      setBodyValue(nodeData.body);
     }
   }, [nodeData]);
 
   const updateNodeMutation = trpc.node.update.useMutation();
 
   const debouncedStatementUpdate = useDebouncedMutation(updateNodeMutation, {
+    delay: 1500,
+    onSuccess: () => {
+      utils.node.getById.invalidate();
+      utils.map.getById.invalidate();
+    },
+  });
+
+  const debouncedBodyUpdate = useDebouncedMutation(updateNodeMutation, {
     delay: 1500,
     onSuccess: () => {
       utils.node.getById.invalidate();
@@ -70,6 +81,16 @@ export function SidePanel() {
       }
     },
     [selectedNodeId, debouncedStatementUpdate],
+  );
+
+  const handleBodyChange = useCallback(
+    (value: string) => {
+      setBodyValue(value);
+      if (selectedNodeId) {
+        debouncedBodyUpdate.mutate({ id: selectedNodeId, body: value });
+      }
+    },
+    [selectedNodeId, debouncedBodyUpdate],
   );
 
   if (!sidePanelOpen || !selectedNodeId) {
@@ -171,11 +192,16 @@ export function SidePanel() {
               {/* Body section */}
               <section data-testid="section-body">
                 <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
-                  Body
+                  Primary Reasoning
                 </h3>
-                <p className="text-sm text-muted-foreground">
-                  {node.body || "No body text."}
-                </p>
+                <textarea
+                  value={bodyValue}
+                  onChange={(e) => handleBodyChange(e.target.value)}
+                  placeholder="Enter your reasoning..."
+                  rows={4}
+                  className="w-full rounded-md border border-border bg-transparent px-3 py-1.5 text-sm outline-none resize-y focus:border-ring focus:ring-1 focus:ring-ring"
+                  data-testid="body-input"
+                />
               </section>
 
               {/* Strength & Polarity (hidden for root) */}
