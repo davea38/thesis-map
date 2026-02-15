@@ -10,6 +10,7 @@ import "@xyflow/react/dist/style.css";
 import { trpc } from "@/lib/trpc";
 import { computeRadialLayout } from "@/lib/radial-layout";
 import { ThesisNode } from "@/components/thesis-node";
+import { PolarityEdge } from "@/components/polarity-edge";
 import { SidePanel } from "@/components/side-panel";
 import { useUIStore } from "@/stores/ui-store";
 
@@ -35,6 +36,7 @@ type MapNode = {
 };
 
 const nodeTypes = { thesis: ThesisNode };
+const edgeTypes = { polarity: PolarityEdge };
 
 export function MapView() {
   const { id } = useParams<{ id: string }>();
@@ -110,6 +112,7 @@ export function MapView() {
         nodes={rfNodes}
         edges={rfEdges}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         onNodeClick={onNodeClick}
         onPaneClick={onPaneClick}
         fitView

@@ -189,6 +189,38 @@ describe("computeRadialLayout", () => {
     expect(edgeIds).toContain("edge-c1-gc1");
   });
 
+  it("sets edge type to 'polarity' with child polarity data", () => {
+    const nodes: LayoutNode[] = [
+      { id: "root", parentId: null, statement: "thesis" },
+      { id: "c1", parentId: "root", statement: "arg", polarity: "tailwind" },
+      { id: "c2", parentId: "root", statement: "counter", polarity: "headwind" },
+    ];
+    const result = computeRadialLayout(nodes);
+
+    for (const edge of result.rfEdges) {
+      expect(edge.type).toBe("polarity");
+      expect(edge.data).toBeDefined();
+    }
+
+    const edgeC1 = result.rfEdges.find((e) => e.target === "c1")!;
+    expect(edgeC1.data).toEqual({ childPolarity: "tailwind" });
+
+    const edgeC2 = result.rfEdges.find((e) => e.target === "c2")!;
+    expect(edgeC2.data).toEqual({ childPolarity: "headwind" });
+  });
+
+  it("sets edge childPolarity to null when node has no polarity", () => {
+    const nodes: LayoutNode[] = [
+      { id: "root", parentId: null, statement: "thesis" },
+      { id: "c1", parentId: "root", statement: "arg" },
+    ];
+    const result = computeRadialLayout(nodes);
+
+    const edge = result.rfEdges[0]!;
+    expect(edge.type).toBe("polarity");
+    expect(edge.data).toEqual({ childPolarity: null });
+  });
+
   it("handles a deep linear chain (no branching)", () => {
     const nodes = [
       makeNode("n0", null),

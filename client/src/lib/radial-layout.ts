@@ -245,7 +245,10 @@ function layoutChildren(
       id: `edge-${parent.node.id}-${child.node.id}`,
       source: parent.node.id,
       target: child.node.id,
-      type: "default",
+      type: "polarity",
+      data: {
+        childPolarity: (child.node as Record<string, unknown>).polarity as string | null ?? null,
+      },
     });
 
     // Recurse into children
