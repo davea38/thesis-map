@@ -103,20 +103,20 @@ The following gaps were identified and addressed in this revision:
 ### 5. Tag CRUD API (spec: 005)
 > Tags are map-global and independent of node hierarchy. They need maps to exist but not specific nodes.
 
-- [ ] **5.1** Create a tRPC `tag` router with a `tag.create` procedure: accepts mapId, name, and color. Validates that the name is unique within the map. Color must be from a defined preset palette.
-  — *Why: Spec 005 requires unique tag names within a map and colors from a preset palette. Enforcing these constraints at the API level prevents invalid data.*
+- [x] **5.1** Create a tRPC `tag` router with a `tag.create` procedure: accepts mapId, name, and color. Validates that the name is unique within the map. Color must be from a defined preset palette.
+  — *Why: Spec 005 requires unique tag names within a map and colors from a preset palette. Enforcing these constraints at the API level prevents invalid data.* *(Implemented with a 10-color preset palette defined in `server/src/routers/tag.ts` and exported as `TAG_COLOR_PALETTE`.)*
 
-- [ ] **5.2** Add a `tag.list` procedure: returns all tags for a given map, including how many nodes each tag is applied to.
-  — *Why: The tag filter panel and side panel tag management need the full tag list. Node counts help users understand tag usage.*
+- [x] **5.2** Add a `tag.list` procedure: returns all tags for a given map, including how many nodes each tag is applied to.
+  — *Why: The tag filter panel and side panel tag management need the full tag list. Node counts help users understand tag usage.* *(Returns tags ordered alphabetically with `nodeCount` computed from `_count.nodeTags`.)*
 
-- [ ] **5.3** Add a `tag.update` procedure: allows renaming and recoloring a tag. Validates name uniqueness within the map. Changes propagate automatically since nodes reference the tag by ID.
-  — *Why: Spec 005 says changes to a tag's name or color apply everywhere the tag is used across the map.*
+- [x] **5.3** Add a `tag.update` procedure: allows renaming and recoloring a tag. Validates name uniqueness within the map. Changes propagate automatically since nodes reference the tag by ID.
+  — *Why: Spec 005 says changes to a tag's name or color apply everywhere the tag is used across the map.* *(Skips uniqueness check when name is unchanged to allow no-op renames.)*
 
-- [ ] **5.4** Add a `tag.delete` procedure: removes the tag and all NodeTag associations (via cascade). Does not delete any nodes. Empty tags (0 nodes) are valid and persist until explicitly deleted.
+- [x] **5.4** Add a `tag.delete` procedure: removes the tag and all NodeTag associations (via cascade). Does not delete any nodes. Empty tags (0 nodes) are valid and persist until explicitly deleted.
   — *Why: Spec 005 explicitly states that deleting a tag does not affect nodes, and empty tags persist. The cascade on NodeTag handles cleanup.*
 
-- [ ] **5.5** Add `tag.addToNode` and `tag.removeFromNode` procedures: manage the many-to-many NodeTag relationship. Validate that the tag and node belong to the same map.
-  — *Why: Tag-node assignment is a separate operation from tag CRUD. Cross-map validation prevents data integrity issues.*
+- [x] **5.5** Add `tag.addToNode` and `tag.removeFromNode` procedures: manage the many-to-many NodeTag relationship. Validate that the tag and node belong to the same map.
+  — *Why: Tag-node assignment is a separate operation from tag CRUD. Cross-map validation prevents data integrity issues.* *(Both procedures validate map membership and bump `map.updatedAt`.)*
 
 ### 6. Attachment & Source API (specs: 008, 012)
 > Attachments are per-node; they need nodes to exist first.
