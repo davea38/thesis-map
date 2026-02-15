@@ -1,21 +1,30 @@
-import { trpc } from "@/lib/trpc";
+import { Routes, Route, Link, Outlet } from "react-router-dom";
+import { SaveIndicator } from "@/components/save-indicator";
+import { LandingPage } from "@/pages/landing-page";
+import { MapView } from "@/pages/map-view";
+
+function RootLayout() {
+  return (
+    <div className="min-h-screen">
+      <header className="flex h-12 items-center justify-between border-b px-4">
+        <Link to="/" className="text-sm font-semibold">
+          Thesis Map
+        </Link>
+        <SaveIndicator />
+      </header>
+      <Outlet />
+    </div>
+  );
+}
 
 function App() {
-  const healthCheck = trpc.healthCheck.useQuery();
-
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-4">
-      <h1 className="text-3xl font-bold">Thesis Map</h1>
-      {healthCheck.isLoading && <p className="text-muted-foreground">Connecting to server...</p>}
-      {healthCheck.isError && (
-        <p className="text-destructive">Server connection failed: {healthCheck.error.message}</p>
-      )}
-      {healthCheck.data && (
-        <p className="text-sm text-muted-foreground">
-          Server status: {healthCheck.data.status}
-        </p>
-      )}
-    </div>
+    <Routes>
+      <Route element={<RootLayout />}>
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/map/:id" element={<MapView />} />
+      </Route>
+    </Routes>
   );
 }
 

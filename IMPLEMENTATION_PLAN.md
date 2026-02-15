@@ -154,8 +154,8 @@ The following gaps were identified and addressed in this revision:
 - [ ] **8.1** Create a reusable `useDebouncedMutation` hook that wraps tRPC mutations with 1-2 second debounce and optimistic updates. The hook should accept a mutation, optimistic update function, and rollback function, and handle the debounce timer lifecycle.
   — *Why: Spec 011 requires all edits to autosave with debouncing and optimistic UI. Building this once as a reusable hook prevents duplicating the pattern in every form.*
 
-- [ ] **8.2** Create a `SaveIndicator` component that subscribes to tRPC mutation states and shows "Saving..." (when any mutation is in-flight), "Saved" (when all mutations have settled successfully), or a warning state (when a mutation has failed). Position it unobtrusively in the UI header/toolbar.
-  — *Why: Spec 011 requires a visible save status indicator so users have confidence their work is persisted.*
+- [x] **8.2** Create a `SaveIndicator` component that subscribes to tRPC mutation states and shows "Saving..." (when any mutation is in-flight), "Saved" (when all mutations have settled successfully), or a warning state (when a mutation has failed). Position it unobtrusively in the UI header/toolbar.
+  — *Why: Spec 011 requires a visible save status indicator so users have confidence their work is persisted.* *(Implemented in `client/src/components/save-indicator.tsx` using `useIsMutating` from React Query. Shows "Saving..." with pulse animation during mutations, "Saved" otherwise. Positioned in the root layout header. Warning state will be enhanced when retry logic (8.3) is implemented.)*
 
 - [ ] **8.3** Implement retry-on-failure logic: when a mutation fails, queue it and retry automatically with exponential backoff. Show a non-blocking toast/banner warning on persistent failure. Never discard the user's pending changes.
   — *Why: Spec 011 requires that user edits are never lost due to transient network issues. Retry with backoff avoids hammering a down server.*
@@ -163,14 +163,14 @@ The following gaps were identified and addressed in this revision:
 ### 9. UI State Management (spec: 001)
 > Local UI state needs to be in place before building interactive components that depend on it.
 
-- [ ] **9.1** Create a Zustand store for local UI state with the following slices: `selectedNodeId` (string | null), `sidePanelOpen` (boolean), `sidePanelScrollTarget` (string | null — e.g., "attachments" when the source badge is clicked), `activeTagFilters` (Set of tag IDs), `inlineEditNodeId` (string | null), `contextMenuState` (position + target node, or null).
-  — *Why: Spec 001 calls for local UI state management separate from server state. Multiple components (canvas, side panel, tag filter, context menu) read and write this shared state. The sidePanelScrollTarget enables the source badge click-to-scroll behavior required by spec 012.*
+- [x] **9.1** Create a Zustand store for local UI state with the following slices: `selectedNodeId` (string | null), `sidePanelOpen` (boolean), `sidePanelScrollTarget` (string | null — e.g., "attachments" when the source badge is clicked), `activeTagFilters` (Set of tag IDs), `inlineEditNodeId` (string | null), `contextMenuState` (position + target node, or null).
+  — *Why: Spec 001 calls for local UI state management separate from server state. Multiple components (canvas, side panel, tag filter, context menu) read and write this shared state. The sidePanelScrollTarget enables the source badge click-to-scroll behavior required by spec 012.* *(Implemented in `client/src/stores/ui-store.ts` with actions: selectNode, clearSelection, openSidePanel, closeSidePanel, setActiveTagFilters, toggleTagFilter, clearTagFilters, setInlineEditNodeId, openContextMenu, closeContextMenu. 11 unit tests in `ui-store.test.ts`.)*
 
 ### 10. Landing Page UI (spec: 002)
 > The first screen the user sees; entry point to all maps. Depends on map CRUD API (task 3).
 
-- [ ] **10.1** Set up React Router with routes: `/` (landing page) and `/map/:id` (map view). Add a root layout component that includes the `SaveIndicator`.
-  — *Why: The app needs client-side routing before individual pages can be built. The root layout ensures the save indicator is visible on every page.*
+- [x] **10.1** Set up React Router with routes: `/` (landing page) and `/map/:id` (map view). Add a root layout component that includes the `SaveIndicator`.
+  — *Why: The app needs client-side routing before individual pages can be built. The root layout ensures the save indicator is visible on every page.* *(Installed `react-router-dom`. BrowserRouter wraps the app in `main.tsx`. `App.tsx` defines routes with a `RootLayout` component using `<Outlet>`. Header includes app name link and SaveIndicator. Placeholder page components in `client/src/pages/`. 4 routing tests using `MemoryRouter`.)*
 
 - [ ] **10.2** Create the landing page component (`/`): fetch and display all maps sorted by last-modified using `map.list`, showing name, thesis statement, and last-modified timestamp for each. Each map entry links to `/map/:id`.
   — *Why: This is the app's home screen and the only way to navigate to a map.*

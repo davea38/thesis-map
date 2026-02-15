@@ -39,3 +39,6 @@
 - Prisma schema lives at `server/prisma/schema.prisma`. Generated client at `server/src/generated/prisma/` (gitignored). Shared instance in `server/src/db.ts`.
 - `prisma.config.ts` in `server/` loads `DATABASE_URL` from `.env` via `dotenv/config`.
 - Run `bun run db:generate` in server/ to regenerate Prisma client after schema changes.
+- Client routing: `react-router-dom` v7. `BrowserRouter` wraps app in `main.tsx`. Use `MemoryRouter` with `initialEntries` for tests.
+- Client state: Zustand v5 store in `client/src/stores/ui-store.ts`. Test with `useUIStore.getState()` and `useUIStore.setState()`.
+- Client directory structure: `src/pages/` for route pages, `src/components/` for shared components, `src/stores/` for Zustand stores, `src/lib/` for utilities.
