@@ -38,7 +38,7 @@ The following gaps were identified and addressed in this revision:
 - [x] **1.4** Wire the tRPC client in `client/` to the tRPC server in `server/`: install `@trpc/client`, `@trpc/react-query`, `@tanstack/react-query`; create a tRPC provider wrapping the app; confirm end-to-end type-safe communication by calling the health-check procedure from the client.
   — *Why: Proves the client-server integration works before building real features on top of it.*
 
-- [ ] **1.5** Set up Vitest for both `client/` and `server/` so that `bun run test` works from the monorepo root, running all tests across both packages.
+- [x] **1.5** Set up Vitest for both `client/` and `server/` so that `bun run test` works from the monorepo root, running all tests across both packages.
   — *Why: AGENTS.md specifies `bun run test` as a command. Tests must be runnable before we write any logic worth testing.*
 
 - [ ] **1.6** Set up ESLint and Prettier with shared config at the monorepo root so that `bun run lint` works across both packages.

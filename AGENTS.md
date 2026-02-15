@@ -32,3 +32,6 @@
 - tRPC v11.10.0 is used. Client uses `createTRPCReact` and `httpBatchLink`.
 - Client type checking (`tsc -b` in client/) also checks server source files transitively. Keep server code clean of unused imports.
 - Client TypeScript uses `noUnusedLocals` and `noUnusedParameters` (strict).
+- Vitest v4 is the test runner for both packages. Server tests use `environment: "node"`, client tests use `environment: "jsdom"` with `@testing-library/react`.
+- Client test setup file (`src/test-setup.ts`) imports `@testing-library/jest-dom/vitest` for DOM matchers.
+- Server tests can use `appRouter.createCaller({})` to test tRPC procedures without HTTP.
