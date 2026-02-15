@@ -55,4 +55,4 @@ Fix any failures before proceeding.
 104. Periodically clean completed items from the plan (keep last 5 for context).
 105. Update `AGENTS.md` with operational learnings - but keep it under 60 lines.
 106. If you find spec inconsistencies, use an Opus subagent with ultrathink to resolve them and update the specs.
-107. When all tasks are complete output <promise>COMPLETE</promise>.
+107. When all tasks in `IMPLEMENTATION_PLAN.md` are complete output <promise>COMPLETE</promise>.
