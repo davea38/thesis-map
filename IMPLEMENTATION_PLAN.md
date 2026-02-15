@@ -29,7 +29,7 @@ The following gaps were identified and addressed in this revision:
 - [x] **1.1** Initialize the monorepo root: run `bun init`, create a root `package.json` with `workspaces` pointing to `client/` and `server/`, and add workspace-level scripts (`dev`, `build`, `test`, `lint`).
   — *Why: A working monorepo root is the prerequisite for all development. The workspace config lets Bun resolve cross-package dependencies.*
 
-- [ ] **1.2** Scaffold the `server/` directory: create `package.json`, install Fastify, `@trpc/server`, Zod, and TypeScript; add `tsconfig.json`; create a minimal `src/index.ts` entry point that starts a Fastify server with a tRPC health-check endpoint.
+- [x] **1.2** Scaffold the `server/` directory: create `package.json`, install Fastify, `@trpc/server`, Zod, and TypeScript; add `tsconfig.json`; create a minimal `src/index.ts` entry point that starts a Fastify server with a tRPC health-check endpoint.
   — *Why: The backend must exist before we can define API routes, connect a database, or serve data to the frontend.*
 
 - [ ] **1.3** Scaffold the `client/` directory: create a Vite + React + TypeScript project, install Tailwind CSS and configure it, initialize shadcn/ui, and create a minimal page that renders in the browser.
