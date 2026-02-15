@@ -43,6 +43,7 @@ export function MapView() {
   const selectedNodeId = useUIStore((s) => s.selectedNodeId);
   const selectNode = useUIStore((s) => s.selectNode);
   const clearSelection = useUIStore((s) => s.clearSelection);
+  const setInlineEditNodeId = useUIStore((s) => s.setInlineEditNodeId);
 
   const { data: map, isLoading, error } = trpc.map.getById.useQuery(
     { id: id! },
@@ -69,9 +70,17 @@ export function MapView() {
     [selectNode],
   );
 
+  const onNodeDoubleClick: NodeMouseHandler = useCallback(
+    (_event, node) => {
+      setInlineEditNodeId(node.id);
+    },
+    [setInlineEditNodeId],
+  );
+
   const onPaneClick = useCallback(() => {
     clearSelection();
-  }, [clearSelection]);
+    setInlineEditNodeId(null);
+  }, [clearSelection, setInlineEditNodeId]);
 
   if (isLoading) {
     return (
@@ -114,6 +123,7 @@ export function MapView() {
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         onNodeClick={onNodeClick}
+        onNodeDoubleClick={onNodeDoubleClick}
         onPaneClick={onPaneClick}
         fitView
         fitViewOptions={{ padding: 0.3 }}

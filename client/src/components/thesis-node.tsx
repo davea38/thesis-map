@@ -1,4 +1,4 @@
-import { memo, useCallback } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { Handle, Position, type NodeProps, type Node } from "@xyflow/react";
 import {
   getPolarityColors,
@@ -7,6 +7,7 @@ import {
   SELECTION_RING_COLOR,
 } from "@/lib/colors";
 import { useUIStore } from "@/stores/ui-store";
+import { trpc } from "@/lib/trpc";
 
 export type ThesisNodeData = Record<string, unknown> & {
   label: string;
@@ -37,6 +38,72 @@ function ThesisNodeComponent({ data, selected }: NodeProps<ThesisNodeType>) {
 
   const selectNode = useUIStore((s) => s.selectNode);
   const openSidePanel = useUIStore((s) => s.openSidePanel);
+  const inlineEditNodeId = useUIStore((s) => s.inlineEditNodeId);
+  const setInlineEditNodeId = useUIStore((s) => s.setInlineEditNodeId);
+
+  const isEditing = inlineEditNodeId === node.id;
+  const [editValue, setEditValue] = useState(node.statement);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const isConfirming = useRef(false);
+
+  const utils = trpc.useUtils();
+  const updateMutation = trpc.node.update.useMutation({
+    onSuccess: () => {
+      // Invalidate queries so the tree refreshes with the new statement
+      utils.map.getById.invalidate();
+      utils.node.getById.invalidate();
+    },
+  });
+
+  // When entering edit mode, sync the edit value and focus the input
+  useEffect(() => {
+    if (isEditing) {
+      setEditValue(node.statement);
+      // Focus after React renders the input
+      requestAnimationFrame(() => {
+        inputRef.current?.focus();
+        inputRef.current?.select();
+      });
+    }
+  }, [isEditing, node.statement]);
+
+  const confirmEdit = useCallback(() => {
+    // Guard against double-confirm (blur can fire after Enter)
+    if (isConfirming.current) return;
+    isConfirming.current = true;
+
+    const trimmed = editValue.trim();
+    setInlineEditNodeId(null);
+
+    // Only mutate if the statement actually changed
+    if (trimmed !== node.statement) {
+      updateMutation.mutate({ id: node.id, statement: trimmed });
+    }
+
+    // Reset the guard after the current event loop
+    requestAnimationFrame(() => {
+      isConfirming.current = false;
+    });
+  }, [editValue, node.id, node.statement, setInlineEditNodeId, updateMutation]);
+
+  const cancelEdit = useCallback(() => {
+    setEditValue(node.statement);
+    setInlineEditNodeId(null);
+  }, [node.statement, setInlineEditNodeId]);
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      e.stopPropagation();
+      if (e.key === "Enter") {
+        e.preventDefault();
+        confirmEdit();
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        cancelEdit();
+      }
+    },
+    [confirmEdit, cancelEdit],
+  );
 
   const handleSourceBadgeClick = useCallback(
     (e: React.MouseEvent) => {
@@ -76,20 +143,36 @@ function ThesisNodeComponent({ data, selected }: NodeProps<ThesisNodeType>) {
         className="!bg-transparent !border-none !w-0 !h-0"
       />
 
-      {/* Statement text */}
-      <p
-        className="text-xs font-medium leading-snug"
-        style={{
-          color: colors.text,
-          overflow: "hidden",
-          display: "-webkit-box",
-          WebkitLineClamp: 3,
-          WebkitBoxOrient: "vertical",
-        }}
-        title={node.statement || "(untitled)"}
-      >
-        {node.statement || "(untitled)"}
-      </p>
+      {/* Statement text — inline edit or static display */}
+      {isEditing ? (
+        <input
+          ref={inputRef}
+          type="text"
+          value={editValue}
+          onChange={(e) => setEditValue(e.target.value)}
+          onKeyDown={handleKeyDown}
+          onBlur={confirmEdit}
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
+          className="nodrag nopan nowheel w-full rounded border border-blue-400 bg-white px-1 py-0.5 text-xs font-medium leading-snug outline-none focus:ring-1 focus:ring-blue-400"
+          style={{ color: colors.text }}
+          data-testid="inline-edit-input"
+        />
+      ) : (
+        <p
+          className="text-xs font-medium leading-snug"
+          style={{
+            color: colors.text,
+            overflow: "hidden",
+            display: "-webkit-box",
+            WebkitLineClamp: 3,
+            WebkitBoxOrient: "vertical",
+          }}
+          title={node.statement || "(untitled)"}
+        >
+          {node.statement || "(untitled)"}
+        </p>
+      )}
 
       {/* Tag chips */}
       {node.tags.length > 0 && (
