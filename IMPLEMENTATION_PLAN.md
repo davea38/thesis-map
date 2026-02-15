@@ -8,6 +8,17 @@
 
 **Status: Greenfield — no code exists yet.** No `client/`, `server/`, `src/`, or `node_modules/` directories are present. There is no `package.json`, no Prisma schema, no React components, and no database configuration. Every spec requirement is pending implementation.
 
+### Changes from Previous Plan
+
+The following gaps were identified and addressed in this revision:
+
+1. **Missing: Map deletion from map view.** Spec 002 requires maps to be deletable both from the landing page and from within the map view. Added task 11.7.
+2. **Missing: Source badge tooltip and 99+ cap.** Spec 012 requires hover tooltip ("N source(s)") and capping the displayed count at 99+. Expanded task 11.4 to include these.
+3. **Missing: Stale fetch discard on URL change.** Spec 012 requires that if a URL changes while a preview fetch is in-flight, the stale result is discarded. Added explicit handling to task 6.2.
+4. **Missing: Undo toast for source removal.** Spec 012 specifies "Remove source — with undo toast." Added task 13.10 for the undo toast pattern.
+5. **Missing: Lazy-loaded preview images.** Spec 012 requires lazy-loading preview images when a node has many (10+) sources. Added to task 13.8.
+6. **Incomplete: Inline edit Escape behavior.** Spec 010 says Escape during inline edit cancels without saving. Clarified in task 12.2.
+
 ---
 
 ## Tasks
@@ -107,31 +118,31 @@
 - [ ] **5.5** Add `tag.addToNode` and `tag.removeFromNode` procedures: manage the many-to-many NodeTag relationship. Validate that the tag and node belong to the same map.
   — *Why: Tag-node assignment is a separate operation from tag CRUD. Cross-map validation prevents data integrity issues.*
 
-### 6. Attachment CRUD API (specs: 008, 012)
+### 6. Attachment & Source API (specs: 008, 012)
 > Attachments are per-node; they need nodes to exist first.
 
 - [ ] **6.1** Create a tRPC `attachment` router with an `attachment.create` procedure: accepts nodeId, type ("source" or "note"), and type-specific fields. For sources, validate that `url` is non-empty and a valid URL (auto-prepend `https://` if protocol is missing, max 2048 chars). For notes, validate that `noteText` is non-empty. On source creation, set `previewFetchStatus` to `"pending"` and trigger a preview fetch (task 6.5). Assign orderIndex based on existing attachment count for the node.
   — *Why: Spec 012 requires a valid URL for sources. Preview fetching begins immediately on creation. OrderIndex maintains creation-order display.*
 
-- [ ] **6.2** Add an `attachment.update` procedure: allows editing attachment fields in place. For sources, when the `url` field changes, clear all preview fields (`previewTitle`, `previewDescription`, `previewImageUrl`, `previewFaviconUrl`, `previewSiteName`, `previewFetchError`), reset `previewFetchStatus` to `"pending"`, and trigger a new preview fetch. Re-validates source URL non-emptiness and note `noteText` non-emptiness on update.
-  — *Why: Spec 012 says URL changes clear preview data and re-trigger fetching. Re-validation prevents invalid state via updates.*
+- [ ] **6.2** Add an `attachment.update` procedure: allows editing attachment fields in place. For sources, when the `url` field changes, clear all preview fields (`previewTitle`, `previewDescription`, `previewImageUrl`, `previewFaviconUrl`, `previewSiteName`, `previewFetchError`), reset `previewFetchStatus` to `"pending"`, set `previewFetchedAt` to null, and trigger a new preview fetch. Include a mechanism to discard stale fetch results: store a fetch generation counter or compare the URL at write-back time so that if the URL changed again during the in-flight fetch, the stale result is discarded (spec 012 edge case). Re-validates source URL non-emptiness and note `noteText` non-emptiness on update.
+  — *Why: Spec 012 says URL changes clear preview data and re-trigger fetching. The stale-fetch guard prevents a slow prior fetch from overwriting data for the new URL.*
 
-- [ ] **6.3** Add an `attachment.delete` procedure: removes a single attachment by ID.
-  — *Why: Users need to remove attachments they no longer want. No cascading concerns beyond the single row.*
+- [ ] **6.3** Add an `attachment.delete` procedure: removes a single attachment by ID. Returns the deleted attachment data so the frontend can support an undo action.
+  — *Why: Users need to remove attachments. Returning the deleted data enables the undo toast required by spec 012 for source removal.*
 
 - [ ] **6.4** Add an `attachment.listByNode` procedure: returns all attachments for a node ordered by `createdAt` ascending (creation order).
   — *Why: Spec 008 says attachments display in creation order. This supports the side panel attachment list.*
 
-- [ ] **6.5** Create an `attachment.refreshPreview` tRPC procedure: fetches the source's URL, parses the HTML response, and extracts OpenGraph/meta metadata (title, description, image, favicon, site name) using the priority order defined in spec 012. Updates the attachment's preview fields and sets `previewFetchStatus` to `"success"` or `"failed"`. Handles timeouts (10s), redirects (max 5), non-HTML content (success with empty preview fields), response size limits (1 MB), and all error modes (DNS failure, HTTP 4xx/5xx, SSL error). Uses User-Agent `ThesisMap/1.0 (link preview)`. Returns the updated attachment.
-  — *Why: Spec 012 requires server-side preview fetching with specific timeout, redirect, and error handling behavior. This procedure is called on source creation (task 6.1) and when the user clicks "Refresh preview" in the UI.*
+- [ ] **6.5** Create an `attachment.refreshPreview` tRPC procedure: fetches the source's URL, parses the HTML response, and extracts OpenGraph/meta metadata (title, description, image, favicon, site name) using the priority order defined in spec 012. Updates the attachment's preview fields and sets `previewFetchStatus` to `"success"` or `"failed"`. Handles timeouts (10s), redirects (max 5), non-HTML content (success with empty preview fields), response size limits (1 MB), and all error modes (DNS failure, HTTP 4xx/5xx, SSL error). Uses User-Agent `ThesisMap/1.0 (link preview)`. Truncates extracted fields to spec limits (title 500 chars, description 1000 chars, site name 200 chars). Before writing results, verifies the attachment's URL has not changed since the fetch began — if it has, discards the result silently. Returns the updated attachment.
+  — *Why: Spec 012 requires server-side preview fetching with specific timeout, redirect, error handling, and truncation behavior. The URL-change guard handles the edge case of concurrent edits. This procedure is called on source creation (task 6.1) and when the user clicks "Refresh preview" in the UI.*
 
 ### 7. Aggregation Logic (spec: 007)
 > Aggregation is a read-only computation over direct children; needs nodes with polarity and strength.
 
-- [ ] **7.1** Implement a server-side utility function `computeBalanceBar(children)` that takes a list of direct child nodes and returns `{ tailwindTotal, headwindTotal, balanceRatio }` or `null`. Logic: sum strengths of tailwind children for tailwindTotal, sum strengths of headwind children for headwindTotal, balanceRatio = tailwindTotal / (tailwindTotal + headwindTotal). Return `null` when tailwindTotal + headwindTotal = 0 (all children are neutral or at 0% strength). Neutral children and 0-strength children contribute nothing.
+- [ ] **7.1** Implement a server-side utility function `computeBalanceBar(children)` that takes a list of direct child nodes and returns `{ tailwindTotal, headwindTotal, balanceRatio }` or `null`. Logic: sum strengths of tailwind children for tailwindTotal, sum strengths of headwind children for headwindTotal, balanceRatio = tailwindTotal / (tailwindTotal + headwindTotal). Return `null` when tailwindTotal + headwindTotal = 0 (all children are neutral or at 0% strength). Neutral children and 0-strength children contribute nothing. Both tagged and untagged children contribute equally.
   — *Why: The balance bar is central to the app's value proposition. Centralizing the computation in one function ensures consistency and testability.*
 
-- [ ] **7.2** Write unit tests for `computeBalanceBar` covering: all-tailwind, all-headwind, mixed, all-neutral, all-zero-strength, empty children array, and the example from spec 007 (80+40 tailwind, 60 headwind, 70 neutral = 67% tailwind).
+- [ ] **7.2** Write unit tests for `computeBalanceBar` covering: all-tailwind, all-headwind, mixed, all-neutral, all-zero-strength, empty children array, single child, and the example from spec 007 (80+40 tailwind, 60 headwind, 70 neutral = 67% tailwind).
   — *Why: Aggregation is the core calculation. Getting it wrong undermines the entire app. Test coverage prevents regressions.*
 
 - [ ] **7.3** Integrate aggregation into `node.getById` and `map.getById` responses: every node that has children includes its computed aggregation data. The root node DOES display aggregation (spec 007). Leaf nodes include `null` for aggregation fields.
@@ -152,8 +163,8 @@
 ### 9. UI State Management (spec: 001)
 > Local UI state needs to be in place before building interactive components that depend on it.
 
-- [ ] **9.1** Create a Zustand store for local UI state with the following slices: `selectedNodeId` (string | null), `sidePanelOpen` (boolean), `activeTagFilters` (Set of tag IDs), `inlineEditNodeId` (string | null), `contextMenuState` (position + target node, or null).
-  — *Why: Spec 001 calls for local UI state management separate from server state. Multiple components (canvas, side panel, tag filter, context menu) read and write this shared state.*
+- [ ] **9.1** Create a Zustand store for local UI state with the following slices: `selectedNodeId` (string | null), `sidePanelOpen` (boolean), `sidePanelScrollTarget` (string | null — e.g., "attachments" when the source badge is clicked), `activeTagFilters` (Set of tag IDs), `inlineEditNodeId` (string | null), `contextMenuState` (position + target node, or null).
+  — *Why: Spec 001 calls for local UI state management separate from server state. Multiple components (canvas, side panel, tag filter, context menu) read and write this shared state. The sidePanelScrollTarget enables the source badge click-to-scroll behavior required by spec 012.*
 
 ### 10. Landing Page UI (spec: 002)
 > The first screen the user sees; entry point to all maps. Depends on map CRUD API (task 3).
@@ -176,7 +187,7 @@
 - [ ] **10.6** Add inline editing of the map name from the landing page: clicking the name transforms it into an editable text field, with changes autosaved via the debounced mutation pattern from task 8.
   — *Why: Spec 002 says the map name can be edited from the landing page. Uses the shared autosave infrastructure.*
 
-### 11. Map View — Radial Layout Canvas (spec: 009)
+### 11. Map View — Radial Layout Canvas (specs: 009, 002)
 > The core visualization; everything interactive happens here. Depends on node CRUD API (task 4) and aggregation (task 7).
 
 - [ ] **11.1** Install React Flow and create the map view page component (`/map/:id`): full-screen canvas with pan and zoom enabled. On mount, fetch the full map tree via `map.getById` and store it in React Query cache.
@@ -188,8 +199,8 @@
 - [ ] **11.3** Define the color system: assign distinct colors for tailwind, headwind, and neutral polarity (used on nodes and edges). Define a preset color palette for tags (8-12 colors users can choose from).
   — *Why: Spec 009 requires polarity color-coding on nodes and edges, and spec 005 requires tag colors from a preset palette. Defining these centrally ensures visual consistency.*
 
-- [ ] **11.4** Create a custom React Flow node component displaying: (a) statement text truncated with ellipsis if it overflows, (b) polarity color-coding as a border or background tint, (c) tag chips as small color-coded badges with tag name, (d) balance bar rendered inline when the node has contributing children (otherwise hidden), and (e) source count badge at the bottom-right corner — a muted pill showing a link icon and count (e.g., `🔗 3`), only visible when the node has >= 1 source attachment. Clicking the badge opens the side panel scrolled to the attachments section.
-  — *Why: Spec 009 defines exactly what each node shows on the canvas. These five visual elements give users at-a-glance understanding of the argument structure. The source badge (spec 012) indicates external references without cluttering the node.*
+- [ ] **11.4** Create a custom React Flow node component displaying: (a) statement text truncated with ellipsis if it overflows, (b) polarity color-coding as a border or background tint, (c) tag chips as small color-coded badges with tag name, (d) balance bar rendered inline when the node has contributing children (otherwise hidden), and (e) source count badge at the bottom-right corner — a muted pill showing a link icon and count (e.g., "🔗 3"), only visible when the node has >= 1 source attachment, capped at "99+" for 100 or more sources; clicking the badge opens the side panel scrolled to the attachments section; hovering shows a tooltip ("N source(s)").
+  — *Why: Spec 009 defines exactly what each node shows on the canvas. These five visual elements give users at-a-glance understanding of the argument structure. The source badge (spec 012) indicates external references without cluttering the node. The tooltip and 99+ cap are explicitly required by spec 012.*
 
 - [ ] **11.5** Render curved edges between parent and child nodes using React Flow's custom edge support. Edge color reflects the child node's polarity.
   — *Why: Spec 009 specifies curved, polarity-colored connection lines to visually reinforce the argument structure.*
@@ -197,22 +208,25 @@
 - [ ] **11.6** Add a header/toolbar in the map view showing: the map name (editable inline with autosave), a back-link to the landing page, and the `SaveIndicator` component.
   — *Why: Spec 002 says the map name can be edited from within the map view. Users need a way to return home. The save indicator provides persistence feedback.*
 
+- [ ] **11.7** Add a "Delete Map" action in the map view header/toolbar: opens the same confirmation dialog as the landing page (naming the map, warning all data will be lost). On confirm, calls `map.delete` and navigates back to the landing page.
+  — *Why: Spec 002 explicitly states "Maps can be deleted from the landing page or when editing the map." Without this task, map deletion is only possible from the landing page, violating the spec.*
+
 ### 12. Node Interaction — Selection, Inline Edit, Context Menu (spec: 010)
 > User interaction with nodes on the canvas. Depends on the canvas (task 11) and UI state (task 9).
 
 - [ ] **12.1** Implement node selection: single-click/tap a node sets `selectedNodeId` in the Zustand store, applies a visual highlight (e.g., glowing border) to the selected node, and opens the side panel. Clicking/tapping empty canvas space clears `selectedNodeId` and closes the side panel.
   — *Why: Selection is the gateway to all node editing. It triggers the side panel and enables keyboard shortcuts on the selected node.*
 
-- [ ] **12.2** Implement inline statement editing: double-click/double-tap a node sets `inlineEditNodeId` in the Zustand store, which replaces the node's statement label with a text input. Enter confirms and autosaves via `node.update`. Click-away (blur) also confirms. Escape cancels without saving.
-  — *Why: Spec 010 requires fast inline editing without opening the side panel. This is the primary way users name new nodes.*
+- [ ] **12.2** Implement inline statement editing: double-click/double-tap a node sets `inlineEditNodeId` in the Zustand store, which replaces the node's statement label with a text input. Enter confirms and autosaves via `node.update`. Click-away (blur) also confirms. Escape cancels without saving and restores the previous statement text.
+  — *Why: Spec 010 requires fast inline editing without opening the side panel. This is the primary way users name new nodes. Escape-to-cancel prevents accidental edits.*
 
 - [ ] **12.3** Implement the context menu: right-click (desktop) or long-press (touch) a node opens a positioned context menu. The menu provides these actions:
   - **Add child** — calls `node.create` with the target node as parent
-  - **Delete** — triggers the delete confirmation flow (task 4.4)
-  - **Set polarity** — submenu with tailwind/headwind/neutral options, calls `node.update`
+  - **Delete** — triggers the delete confirmation flow (task 4.4). For the root node, redirect to the map deletion flow (task 11.7) instead.
+  - **Set polarity** — submenu with tailwind/headwind/neutral options, calls `node.update`. Hidden or disabled for the root node.
   - **Add tag** — submenu listing existing map tags plus a "Create new tag" option
   - **Remove tag** — submenu listing tags currently on this node (only shown if node has tags)
-  — *Why: The context menu is the primary way to perform structural operations on nodes. It must be comprehensive per spec 010.*
+  — *Why: The context menu is the primary way to perform structural operations on nodes. It must be comprehensive per spec 010. Root node constraints must be respected in the menu.*
 
 - [ ] **12.4** Implement keyboard shortcuts (active when a node is selected and no text input is focused): Escape deselects and closes the side panel; Delete/Backspace triggers the delete confirmation for the selected node; Enter activates inline edit on the selected node.
   — *Why: Spec 010 defines keyboard shortcuts for power users. The "no text input focused" guard prevents conflicts with typing.*
@@ -220,11 +234,11 @@
 - [ ] **12.5** Implement the "Add child" flow end-to-end: create a new child node via the API with defaults, recompute the radial layout to position the new node, and immediately activate inline edit on the new node so the user can type the statement.
   — *Why: Spec 004 requires new nodes to open with inline edit active. Layout recomputation ensures the new node is properly positioned in the radial arrangement.*
 
-### 13. Detail Side Panel (spec: 010)
+### 13. Detail Side Panel (specs: 010, 012)
 > Full editing capabilities for the selected node. Depends on selection (task 12) and all CRUD APIs (tasks 4-7).
 
-- [ ] **13.1** Create the side panel shell: opens when `selectedNodeId` is set, closes on X button click or canvas click. Desktop/tablet: renders as a right-side overlay panel that does not push or resize the canvas. Mobile/small screens: renders as a bottom sheet that slides up from the bottom. Transitions are animated.
-  — *Why: The side panel is where users do detailed editing. Responsive layout (overlay vs bottom sheet) ensures usability across devices per spec 010.*
+- [ ] **13.1** Create the side panel shell: opens when `selectedNodeId` is set, closes on X button click or canvas click. Desktop/tablet: renders as a right-side overlay panel that does not push or resize the canvas. Mobile/small screens: renders as a bottom sheet that slides up from the bottom. Transitions are animated. When `sidePanelScrollTarget` is set in the Zustand store (e.g., "attachments"), auto-scroll to that section on open and then clear the scroll target.
+  — *Why: The side panel is where users do detailed editing. Responsive layout (overlay vs bottom sheet) ensures usability across devices per spec 010. The scroll target supports the source badge click-to-attachments behavior.*
 
 - [ ] **13.2** Add the statement editing section: a text input showing the selected node's statement, with autosave via the debounced mutation hook. For the root node, a subtle label indicates that editing updates the map's thesis statement.
   — *Why: The side panel must support editing the statement. Users need visual feedback that root statement edits affect the map thesis (spec 003).*
@@ -244,11 +258,14 @@
 - [ ] **13.7** Add map-wide tag management within the side panel: a "Manage Tags" expandable section or modal that lists all tags in the map. For each tag, allow renaming (with uniqueness validation), recoloring (from preset palette), and deleting (with a note that deletion removes the tag from all nodes).
   — *Why: Spec 005 says tags can be renamed, recolored, and deleted from the side panel. Changes propagate across the map. This is separate from per-node tag assignment (13.6).*
 
-- [ ] **13.8** Add the attachment management section: list all attachments for the node in creation order. Provide "Add Source" and "Add Note" buttons. Each source renders as a card with three states: (a) **success** — favicon, site name, bold preview title, description (2–3 lines), preview image thumbnail, muted URL link, and user note below; (b) **loading** — skeleton/shimmer placeholders for preview fields with URL visible; (c) **failed** — globe icon, domain name, "Preview unavailable" message, retry button, clickable URL, and user note. Card actions: edit URL (triggers re-fetch), remove source (with undo toast), refresh preview, open URL in new tab. Each note displays its text as an editable text area. User notes on sources are inline editable with autosave. Each attachment has a remove button.
-  — *Why: Spec 010 places attachment management in the side panel. Spec 012 defines source card states, preview display, and card actions. The three-state card design handles the asynchronous preview fetch lifecycle.*
+- [ ] **13.8** Add the attachment management section: list all attachments for the node in creation order. Provide "Add Source" and "Add Note" buttons. When "Add Source" is clicked, insert an empty source card with the URL input auto-focused (spec 012 creation flow). Each source renders as a card with three states: (a) **success** — favicon, site name, bold preview title, description (2-3 lines truncated), preview image thumbnail (lazy-loaded for performance when many sources exist), muted URL link, and user note below; (b) **loading** — skeleton/shimmer placeholders for preview fields with URL visible; (c) **failed** — globe icon, domain name, "Preview unavailable" message, retry button, clickable URL, and user note. Card actions: edit URL (triggers re-fetch), remove source (with undo toast via task 13.10), refresh preview, open URL in new tab. Each note displays its text as an editable text area with autosave. User notes on sources are inline editable with autosave. Each attachment has a remove button. The source list is scrollable when many sources exist.
+  — *Why: Spec 010 places attachment management in the side panel. Spec 012 defines source card states, preview display, creation flow, and card actions. The three-state card design handles the asynchronous preview fetch lifecycle. Lazy-loading images prevents performance issues with 10+ sources per spec 012.*
 
 - [ ] **13.9** Add the aggregation details section: display the balance bar (same visual as on the canvas node) plus a numeric breakdown showing tailwind total, headwind total, and balance ratio percentage. Only visible when the selected node has children contributing to aggregation (at least one non-neutral child with strength > 0). For leaf nodes or nodes with only neutral/zero-strength children, show a message like "No aggregation data" or hide the section.
   — *Why: Spec 010 requires the side panel to show aggregation details. The numeric breakdown gives precision beyond the visual bar.*
+
+- [ ] **13.10** Implement a reusable undo toast pattern: when a source is removed, show a non-blocking toast notification with an "Undo" action. If the user clicks undo within a brief window (e.g., 5 seconds), re-create the attachment. Otherwise, the deletion is finalized. Use the deleted attachment data returned by task 6.3 to support restoration.
+  — *Why: Spec 012 explicitly requires "Remove source — with undo toast." This prevents accidental data loss and is a distinct UX pattern from the confirmation dialogs used for node deletion.*
 
 ### 14. Tag Filtering (spec: 005)
 > Depends on tags existing and nodes being rendered on the canvas.
@@ -278,7 +295,7 @@
 
 ## Spec Conflict Notes
 
-1. **No hard conflicts detected.** All 11 specs are internally consistent with each other.
+1. **No hard conflicts detected.** All 12 specs are internally consistent with each other.
 
 2. **Tension (not a conflict): "required" statement vs. "empty statement" on creation.** Spec 003 says statement is "required" but spec 004 says new nodes start with an "empty statement" and inline edit activates immediately. **Resolution:** The statement column is `NOT NULL` with a default empty string `""`. The UI activates inline edit immediately so the user fills it in. An empty string is a valid (if not ideal) state — there is no server-side rejection of empty statements.
 
@@ -295,3 +312,7 @@
 8. **MVP scope explicitly excluded:** No file uploads (spec 008), no reparenting (spec 004), no multi-select (spec 010), no recursive confidence (spec 007), no auth (spec 001), no conflict resolution (spec 011), no manual sibling reordering (spec 004), no manual attachment reordering (spec 008).
 
 9. **Sources replace citations.** Spec 012 introduces sources as the replacement for the former citation attachment type. The `sourceType` discriminator field (`"url"` for MVP) enables future extensibility to file uploads, DOIs, etc. Preview fetching is synchronous in MVP (task 6.5); this could become asynchronous (e.g., background job) if latency is a concern at scale.
+
+10. **Stale fetch discard.** Spec 012 states "URL change during in-flight fetch: Discard the stale fetch result if the URL no longer matches." Both task 6.2 (update procedure) and task 6.5 (refreshPreview) implement this guard by comparing the URL at write-back time against the current stored URL.
+
+11. **Source removal undo vs. node deletion confirmation.** Spec 012 uses an undo toast pattern for source removal, while spec 004 uses a confirmation dialog for node deletion. These are intentionally different UX patterns — undo toast for lightweight reversible actions, confirmation dialog for destructive cascading operations.
