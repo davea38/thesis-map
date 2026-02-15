@@ -1,0 +1,10 @@
+{
+  "name": "server",
+  "private": true,
+  "scripts": {
+    "dev": "echo 'server dev not yet configured'",
+    "build": "echo 'server build not yet configured'",
+    "test": "echo 'server tests not yet configured'",
+    "lint": "echo 'server lint not yet configured'"
+  }
+}

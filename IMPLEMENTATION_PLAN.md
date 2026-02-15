@@ -26,7 +26,7 @@ The following gaps were identified and addressed in this revision:
 ### 1. Project Scaffolding (spec: 001-tech-stack)
 > Everything depends on having a working monorepo with build tooling. This is the foundation all other tasks build on.
 
-- [ ] **1.1** Initialize the monorepo root: run `bun init`, create a root `package.json` with `workspaces` pointing to `client/` and `server/`, and add workspace-level scripts (`dev`, `build`, `test`, `lint`).
+- [x] **1.1** Initialize the monorepo root: run `bun init`, create a root `package.json` with `workspaces` pointing to `client/` and `server/`, and add workspace-level scripts (`dev`, `build`, `test`, `lint`).
   — *Why: A working monorepo root is the prerequisite for all development. The workspace config lets Bun resolve cross-package dependencies.*
 
 - [ ] **1.2** Scaffold the `server/` directory: create `package.json`, install Fastify, `@trpc/server`, Zod, and TypeScript; add `tsconfig.json`; create a minimal `src/index.ts` entry point that starts a Fastify server with a tRPC health-check endpoint.

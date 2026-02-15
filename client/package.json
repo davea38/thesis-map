@@ -1,0 +1,10 @@
+{
+  "name": "client",
+  "private": true,
+  "scripts": {
+    "dev": "echo 'client dev not yet configured'",
+    "build": "echo 'client build not yet configured'",
+    "test": "echo 'client tests not yet configured'",
+    "lint": "echo 'client lint not yet configured'"
+  }
+}
