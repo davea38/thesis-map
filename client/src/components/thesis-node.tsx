@@ -4,6 +4,7 @@ import {
   getPolarityColors,
   getContrastText,
   POLARITY_COLORS,
+  SELECTION_RING_COLOR,
 } from "@/lib/colors";
 import { useUIStore } from "@/stores/ui-store";
 
@@ -27,7 +28,7 @@ export type ThesisNodeData = Record<string, unknown> & {
 
 export type ThesisNodeType = Node<ThesisNodeData, "thesis">;
 
-function ThesisNodeComponent({ data }: NodeProps<ThesisNodeType>) {
+function ThesisNodeComponent({ data, selected }: NodeProps<ThesisNodeType>) {
   const { node } = data;
   const isRoot = node.parentId === null;
   const colors = getPolarityColors(node.polarity);
@@ -54,6 +55,9 @@ function ThesisNodeComponent({ data }: NodeProps<ThesisNodeType>) {
         backgroundColor: colors.bg,
         minWidth: 160,
         maxWidth: 220,
+        boxShadow: selected
+          ? `0 0 0 3px ${SELECTION_RING_COLOR}`
+          : undefined,
       }}
     >
       {/* Target handle (incoming edge from parent) */}

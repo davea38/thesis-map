@@ -1,9 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ReactFlowProvider } from "@xyflow/react";
 import { ThesisNode, type ThesisNodeData } from "./thesis-node";
 import { useUIStore } from "@/stores/ui-store";
+import { SELECTION_RING_COLOR } from "@/lib/colors";
 
 function makeNodeData(overrides: Partial<ThesisNodeData["node"]> = {}): ThesisNodeData {
   return {
@@ -45,11 +46,15 @@ function makeProps(data: ThesisNodeData) {
   } as Parameters<typeof ThesisNode>[0];
 }
 
-function renderNode(data: ThesisNodeData) {
+function renderNode(data: ThesisNodeData, options?: { selected?: boolean }) {
   const user = userEvent.setup();
+  const props = makeProps(data);
+  if (options?.selected !== undefined) {
+    props.selected = options.selected;
+  }
   const result = render(
     <ReactFlowProvider>
-      <ThesisNode {...makeProps(data)} />
+      <ThesisNode {...props} />
     </ReactFlowProvider>,
   );
   return { ...result, user };
@@ -240,6 +245,24 @@ describe("ThesisNode", () => {
       expect(state.selectedNodeId).toBe("test-node");
       expect(state.sidePanelOpen).toBe(true);
       expect(state.sidePanelScrollTarget).toBe("attachments");
+    });
+  });
+
+  describe("selection highlight", () => {
+    it("shows selection ring when node is selected", () => {
+      renderNode(makeNodeData(), { selected: true });
+      const nodeEl = screen.getByText("Test statement").closest("div");
+      expect(nodeEl).toHaveStyle({
+        boxShadow: `0 0 0 3px ${SELECTION_RING_COLOR}`,
+      });
+    });
+
+    it("does not show selection ring when node is not selected", () => {
+      renderNode(makeNodeData(), { selected: false });
+      const nodeEl = screen.getByText("Test statement").closest("div");
+      // When not selected, boxShadow should not contain the selection ring
+      const style = nodeEl?.getAttribute("style") ?? "";
+      expect(style).not.toContain("box-shadow");
     });
   });
 });

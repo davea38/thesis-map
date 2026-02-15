@@ -214,8 +214,8 @@ The following gaps were identified and addressed in this revision:
 ### 12. Node Interaction — Selection, Inline Edit, Context Menu (spec: 010)
 > User interaction with nodes on the canvas. Depends on the canvas (task 11) and UI state (task 9).
 
-- [ ] **12.1** Implement node selection: single-click/tap a node sets `selectedNodeId` in the Zustand store, applies a visual highlight (e.g., glowing border) to the selected node, and opens the side panel. Clicking/tapping empty canvas space clears `selectedNodeId` and closes the side panel.
-  — *Why: Selection is the gateway to all node editing. It triggers the side panel and enables keyboard shortcuts on the selected node.*
+- [x] **12.1** Implement node selection: single-click/tap a node sets `selectedNodeId` in the Zustand store, applies a visual highlight (e.g., glowing border) to the selected node, and opens the side panel. Clicking/tapping empty canvas space clears `selectedNodeId` and closes the side panel.
+  — *Why: Selection is the gateway to all node editing. It triggers the side panel and enables keyboard shortcuts on the selected node.* *(Implemented in `map-view.tsx` with `onNodeClick` and `onPaneClick` handlers that sync Zustand store with React Flow's selected state. `thesis-node.tsx` reads the `selected` prop and renders a blue selection ring via `boxShadow` using `SELECTION_RING_COLOR`. 2 new tests for selection highlight in `thesis-node.test.tsx`.)*
 
 - [ ] **12.2** Implement inline statement editing: double-click/double-tap a node sets `inlineEditNodeId` in the Zustand store, which replaces the node's statement label with a text input. Enter confirms and autosaves via `node.update`. Click-away (blur) also confirms. Escape cancels without saving and restores the previous statement text.
   — *Why: Spec 010 requires fast inline editing without opening the side panel. This is the primary way users name new nodes. Escape-to-cancel prevents accidental edits.*
