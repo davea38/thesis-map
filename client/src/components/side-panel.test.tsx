@@ -418,6 +418,80 @@ describe("SidePanel", () => {
     });
   });
 
+  describe("polarity selector", () => {
+    it("renders three polarity buttons for non-root nodes", () => {
+      renderSidePanel({ nodeData: mockNode });
+      const selector = screen.getByTestId("polarity-selector");
+      expect(selector).toBeInTheDocument();
+      expect(screen.getByTestId("polarity-tailwind")).toBeInTheDocument();
+      expect(screen.getByTestId("polarity-headwind")).toBeInTheDocument();
+      expect(screen.getByTestId("polarity-neutral")).toBeInTheDocument();
+    });
+
+    it("marks the current polarity as pressed", () => {
+      renderSidePanel({ nodeData: { ...mockNode, polarity: "tailwind" } });
+      const tailwindBtn = screen.getByTestId("polarity-tailwind");
+      const headwindBtn = screen.getByTestId("polarity-headwind");
+      const neutralBtn = screen.getByTestId("polarity-neutral");
+      expect(tailwindBtn).toHaveAttribute("aria-pressed", "true");
+      expect(headwindBtn).toHaveAttribute("aria-pressed", "false");
+      expect(neutralBtn).toHaveAttribute("aria-pressed", "false");
+    });
+
+    it("marks headwind as pressed when node is headwind", () => {
+      renderSidePanel({ nodeData: { ...mockNode, polarity: "headwind" } });
+      expect(screen.getByTestId("polarity-headwind")).toHaveAttribute("aria-pressed", "true");
+      expect(screen.getByTestId("polarity-tailwind")).toHaveAttribute("aria-pressed", "false");
+    });
+
+    it("marks neutral as pressed when node is neutral", () => {
+      renderSidePanel({ nodeData: { ...mockNode, polarity: "neutral" } });
+      expect(screen.getByTestId("polarity-neutral")).toHaveAttribute("aria-pressed", "true");
+      expect(screen.getByTestId("polarity-tailwind")).toHaveAttribute("aria-pressed", "false");
+    });
+
+    it("updates local state when clicking a different polarity", async () => {
+      const { user } = renderSidePanel({ nodeData: { ...mockNode, polarity: "neutral" } });
+      const tailwindBtn = screen.getByTestId("polarity-tailwind");
+
+      await user.click(tailwindBtn);
+
+      expect(tailwindBtn).toHaveAttribute("aria-pressed", "true");
+      expect(screen.getByTestId("polarity-neutral")).toHaveAttribute("aria-pressed", "false");
+    });
+
+    it("does not show polarity selector for root nodes", () => {
+      renderSidePanel({
+        selectedNodeId: "root-1",
+        nodeData: mockRootNode,
+        nodeQueryKey: "root-1",
+      });
+      expect(screen.queryByTestId("polarity-selector")).not.toBeInTheDocument();
+    });
+
+    it("has a 'Polarity' label", () => {
+      renderSidePanel({ nodeData: mockNode });
+      const selector = screen.getByTestId("polarity-selector");
+      expect(within(selector).getByText("Polarity")).toBeInTheDocument();
+    });
+
+    it("applies polarity color-coding to buttons", () => {
+      renderSidePanel({ nodeData: { ...mockNode, polarity: "tailwind" } });
+      const tailwindBtn = screen.getByTestId("polarity-tailwind");
+      // Tailwind border color (jsdom may return hex or rgb)
+      expect(tailwindBtn.style.borderColor).toBeTruthy();
+      // Selected tailwind has non-transparent background
+      expect(tailwindBtn.style.backgroundColor).not.toBe("transparent");
+      expect(tailwindBtn.style.backgroundColor).toBeTruthy();
+    });
+
+    it("shows unselected buttons with transparent background", () => {
+      renderSidePanel({ nodeData: { ...mockNode, polarity: "tailwind" } });
+      const headwindBtn = screen.getByTestId("polarity-headwind");
+      expect(headwindBtn.style.backgroundColor).toBe("transparent");
+    });
+  });
+
   describe("aggregation section", () => {
     it("shows aggregation section when node has aggregation data", () => {
       renderSidePanel({

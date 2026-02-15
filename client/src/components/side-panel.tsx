@@ -2,7 +2,7 @@ import { useEffect, useRef, useCallback, useState } from "react";
 import { X } from "lucide-react";
 import { useUIStore } from "@/stores/ui-store";
 import { trpc } from "@/lib/trpc";
-import { getPolarityColors } from "@/lib/colors";
+import { getPolarityColors, POLARITY_COLORS, type Polarity } from "@/lib/colors";
 import { useDebouncedMutation } from "@/hooks/use-debounced-mutation";
 
 export function SidePanel() {
@@ -48,6 +48,8 @@ export function SidePanel() {
   const [bodyValue, setBodyValue] = useState("");
   // Strength editing state
   const [strengthValue, setStrengthValue] = useState(0);
+  // Polarity editing state
+  const [polarityValue, setPolarityValue] = useState<Polarity>("neutral");
 
   // Sync local state with server data when node changes
   useEffect(() => {
@@ -55,6 +57,7 @@ export function SidePanel() {
       setStatementValue(nodeData.statement);
       setBodyValue(nodeData.body);
       setStrengthValue(nodeData.strength ?? 0);
+      setPolarityValue((nodeData.polarity as Polarity) ?? "neutral");
     }
   }, [nodeData]);
 
@@ -77,6 +80,14 @@ export function SidePanel() {
   });
 
   const debouncedStrengthUpdate = useDebouncedMutation(updateNodeMutation, {
+    delay: 500,
+    onSuccess: () => {
+      utils.node.getById.invalidate();
+      utils.map.getById.invalidate();
+    },
+  });
+
+  const debouncedPolarityUpdate = useDebouncedMutation(updateNodeMutation, {
     delay: 500,
     onSuccess: () => {
       utils.node.getById.invalidate();
@@ -113,6 +124,16 @@ export function SidePanel() {
       }
     },
     [selectedNodeId, debouncedStrengthUpdate],
+  );
+
+  const handlePolarityChange = useCallback(
+    (value: Polarity) => {
+      setPolarityValue(value);
+      if (selectedNodeId) {
+        debouncedPolarityUpdate.mutate({ id: selectedNodeId, polarity: value });
+      }
+    },
+    [selectedNodeId, debouncedPolarityUpdate],
   );
 
   if (!sidePanelOpen || !selectedNodeId) {
@@ -276,9 +297,42 @@ export function SidePanel() {
                         aria-label="Strength slider"
                       />
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Polarity</span>
-                      <span className="capitalize">{node.polarity ?? "neutral"}</span>
+                    {/* Polarity selector */}
+                    <div data-testid="polarity-selector">
+                      <label className="text-muted-foreground block mb-1.5">
+                        Polarity
+                      </label>
+                      <div className="flex gap-1.5">
+                        {(["tailwind", "headwind", "neutral"] as const).map(
+                          (p) => {
+                            const pc = POLARITY_COLORS[p];
+                            const isSelected = polarityValue === p;
+                            return (
+                              <button
+                                key={p}
+                                type="button"
+                                onClick={() => handlePolarityChange(p)}
+                                className={
+                                  "flex-1 rounded-md border-2 px-2 py-1 text-xs font-medium capitalize transition-colors " +
+                                  (isSelected
+                                    ? "ring-1 ring-offset-1"
+                                    : "opacity-60 hover:opacity-100")
+                                }
+                                style={{
+                                  borderColor: pc.border,
+                                  backgroundColor: isSelected ? pc.bg : "transparent",
+                                  color: pc.text,
+                                  ...(isSelected ? { ringColor: pc.border } : {}),
+                                }}
+                                aria-pressed={isSelected}
+                                data-testid={`polarity-${p}`}
+                              >
+                                {p}
+                              </button>
+                            );
+                          },
+                        )}
+                      </div>
                     </div>
                   </div>
                 </section>

@@ -249,8 +249,8 @@ The following gaps were identified and addressed in this revision:
 - [x] **13.4** Add the strength editing section: a slider (0-100%) and a numeric input (synced), with autosave. Hidden entirely when the selected node is the root node.
   — *Why: Strength drives aggregation. Hiding for root enforces spec 003 constraint that root has no strength.* *(Replaced read-only strength display with an interactive range slider and synced numeric input. Both are backed by `useDebouncedMutation` (500ms delay for responsive slider feel). Values clamped to 0-100 integer range. Local state syncs with server data via `useEffect`. Hidden for root nodes. 9 new tests in `side-panel.test.tsx`.)*
 
-- [ ] **13.5** Add the polarity selector: three options (tailwind/headwind/neutral) with polarity color-coding, with autosave. Hidden entirely when the selected node is the root node.
-  — *Why: Polarity drives aggregation and visual coding. Hiding for root enforces spec 003/006 constraints.*
+- [x] **13.5** Add the polarity selector: three options (tailwind/headwind/neutral) with polarity color-coding, with autosave. Hidden entirely when the selected node is the root node.
+  — *Why: Polarity drives aggregation and visual coding. Hiding for root enforces spec 003/006 constraints.* *(Implemented as three color-coded toggle buttons in the Properties section of the side panel. Uses `useDebouncedMutation` with 500ms delay for responsive feel. Each button shows polarity border color, selected button has tinted background. `aria-pressed` for accessibility. Hidden for root nodes alongside strength editor. 9 new tests in `side-panel.test.tsx`.)*
 
 - [ ] **13.6** Add the tag viewing and assignment section: display currently applied tags as color-coded removable chips. Provide a dropdown/combo-box to add existing map tags or create a new tag inline (name + color from preset palette). Removing a chip calls `tag.removeFromNode`.
   — *Why: Spec 010 places tag management in the side panel. Users need to quickly view, add, and remove tags on the selected node.*
