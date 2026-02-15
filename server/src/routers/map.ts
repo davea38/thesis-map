@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { router, publicProcedure } from "../trpc.js";
 import { db } from "../db.js";
+import { computeBalanceBar } from "../lib/compute-balance-bar.js";
 
 export const mapRouter = router({
   create: publicProcedure
@@ -80,40 +81,17 @@ export const mapRouter = router({
       const childrenByParent = new Map<string, typeof map.nodes>();
 
       for (const node of map.nodes) {
-        const parentId = node.parentId ?? "__root__";
-        const siblings = childrenByParent.get(parentId) ?? [];
-        siblings.push(node);
-        childrenByParent.set(parentId, siblings);
-      }
-
-      function computeAggregation(nodeId: string) {
-        const children = childrenByParent.get(nodeId) ?? [];
-        if (children.length === 0) return null;
-
-        let tailwindTotal = 0;
-        let headwindTotal = 0;
-
-        for (const child of children) {
-          const strength = child.strength ?? 0;
-          if (strength === 0) continue;
-          if (child.polarity === "tailwind") tailwindTotal += strength;
-          else if (child.polarity === "headwind") headwindTotal += strength;
+        if (node.parentId) {
+          const siblings = childrenByParent.get(node.parentId) ?? [];
+          siblings.push(node);
+          childrenByParent.set(node.parentId, siblings);
         }
-
-        const total = tailwindTotal + headwindTotal;
-        if (total === 0) return null;
-
-        return {
-          tailwindTotal,
-          headwindTotal,
-          balanceRatio: tailwindTotal / total,
-        };
       }
 
       const nodesWithAggregation = map.nodes.map((node) => ({
         ...node,
         tags: node.nodeTags.map((nt) => nt.tag),
-        aggregation: computeAggregation(node.id),
+        aggregation: computeBalanceBar(childrenByParent.get(node.id) ?? []),
       }));
 
       return {

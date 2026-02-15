@@ -139,14 +139,14 @@ The following gaps were identified and addressed in this revision:
 ### 7. Aggregation Logic (spec: 007)
 > Aggregation is a read-only computation over direct children; needs nodes with polarity and strength.
 
-- [ ] **7.1** Implement a server-side utility function `computeBalanceBar(children)` that takes a list of direct child nodes and returns `{ tailwindTotal, headwindTotal, balanceRatio }` or `null`. Logic: sum strengths of tailwind children for tailwindTotal, sum strengths of headwind children for headwindTotal, balanceRatio = tailwindTotal / (tailwindTotal + headwindTotal). Return `null` when tailwindTotal + headwindTotal = 0 (all children are neutral or at 0% strength). Neutral children and 0-strength children contribute nothing. Both tagged and untagged children contribute equally.
-  — *Why: The balance bar is central to the app's value proposition. Centralizing the computation in one function ensures consistency and testability.*
+- [x] **7.1** Implement a server-side utility function `computeBalanceBar(children)` that takes a list of direct child nodes and returns `{ tailwindTotal, headwindTotal, balanceRatio }` or `null`. Logic: sum strengths of tailwind children for tailwindTotal, sum strengths of headwind children for headwindTotal, balanceRatio = tailwindTotal / (tailwindTotal + headwindTotal). Return `null` when tailwindTotal + headwindTotal = 0 (all children are neutral or at 0% strength). Neutral children and 0-strength children contribute nothing. Both tagged and untagged children contribute equally.
+  — *Why: The balance bar is central to the app's value proposition. Centralizing the computation in one function ensures consistency and testability.* *(Implemented in `server/src/lib/compute-balance-bar.ts` with typed `ChildInput` and `BalanceBarResult` interfaces.)*
 
-- [ ] **7.2** Write unit tests for `computeBalanceBar` covering: all-tailwind, all-headwind, mixed, all-neutral, all-zero-strength, empty children array, single child, and the example from spec 007 (80+40 tailwind, 60 headwind, 70 neutral = 67% tailwind).
-  — *Why: Aggregation is the core calculation. Getting it wrong undermines the entire app. Test coverage prevents regressions.*
+- [x] **7.2** Write unit tests for `computeBalanceBar` covering: all-tailwind, all-headwind, mixed, all-neutral, all-zero-strength, empty children array, single child, and the example from spec 007 (80+40 tailwind, 60 headwind, 70 neutral = 67% tailwind).
+  — *Why: Aggregation is the core calculation. Getting it wrong undermines the entire app. Test coverage prevents regressions.* *(14 test cases in `server/src/lib/compute-balance-bar.test.ts` covering all specified scenarios plus null strength and null polarity edge cases.)*
 
-- [ ] **7.3** Integrate aggregation into `node.getById` and `map.getById` responses: every node that has children includes its computed aggregation data. The root node DOES display aggregation (spec 007). Leaf nodes include `null` for aggregation fields.
-  — *Why: The frontend needs aggregation data on every node to render balance bars without making per-node requests.*
+- [x] **7.3** Integrate aggregation into `node.getById` and `map.getById` responses: every node that has children includes its computed aggregation data. The root node DOES display aggregation (spec 007). Leaf nodes include `null` for aggregation fields.
+  — *Why: The frontend needs aggregation data on every node to render balance bars without making per-node requests.* *(Refactored both routers to use the shared `computeBalanceBar` function, replacing duplicated inline logic.)*
 
 ### 8. Persistence & Autosave Infrastructure (spec: 011)
 > Autosave is a cross-cutting concern that affects every edit operation in the UI. Set up the pattern before building individual UI forms.

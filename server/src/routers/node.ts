@@ -2,6 +2,7 @@ import { z } from "zod";
 import { router, publicProcedure } from "../trpc.js";
 import { db } from "../db.js";
 import { bumpMapUpdatedAt } from "../lib/bump-map-updated.js";
+import { computeBalanceBar } from "../lib/compute-balance-bar.js";
 
 export const nodeRouter = router({
   create: publicProcedure
@@ -71,26 +72,7 @@ export const nodeRouter = router({
         throw new Error("Node not found");
       }
 
-      // Compute aggregation from direct children
-      let tailwindTotal = 0;
-      let headwindTotal = 0;
-
-      for (const child of node.children) {
-        const strength = child.strength ?? 0;
-        if (strength === 0) continue;
-        if (child.polarity === "tailwind") tailwindTotal += strength;
-        else if (child.polarity === "headwind") headwindTotal += strength;
-      }
-
-      const total = tailwindTotal + headwindTotal;
-      const aggregation =
-        total === 0
-          ? null
-          : {
-              tailwindTotal,
-              headwindTotal,
-              balanceRatio: tailwindTotal / total,
-            };
+      const aggregation = computeBalanceBar(node.children);
 
       return {
         ...node,
