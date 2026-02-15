@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
 import { appRouter } from "../router.js";
 
 // Mock the db module
@@ -21,7 +21,11 @@ vi.mock("../db.js", () => {
 
 // Import the mocked db after mocking
 import { db } from "../db.js";
-const mockDb = vi.mocked(db);
+const mockDb = db as unknown as {
+  $transaction: Mock;
+  map: { findMany: Mock; findUnique: Mock; update: Mock; delete: Mock; create: Mock };
+  node: { create: Mock };
+};
 
 describe("map router", () => {
   const caller = appRouter.createCaller({});

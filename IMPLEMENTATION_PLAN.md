@@ -85,20 +85,20 @@ The following gaps were identified and addressed in this revision:
 ### 4. Node CRUD API (specs: 003, 004, 006)
 > Nodes are the core data unit; hierarchy, polarity, attachments, and aggregation all depend on nodes existing.
 
-- [ ] **4.1** Add a `node.create` procedure: accepts parentId and mapId, creates a child node with defaults (statement = "", polarity = "neutral", strength = 0, no tags). Returns the created node. Validates that the parent node exists and belongs to the same map.
+- [x] **4.1** Add a `node.create` procedure: accepts parentId and mapId, creates a child node with defaults (statement = "", polarity = "neutral", strength = 0, no tags). Returns the created node. Validates that the parent node exists and belongs to the same map.
   — *Why: Spec 004 defines explicit creation defaults. Validating parentId prevents cross-map linking bugs.*
 
-- [ ] **4.2** Add a `node.getById` procedure: returns a single node with its children (ordered by createdAt ascending), applied tags, attachments (ordered by createdAt ascending), and computed aggregation data (tailwindTotal, headwindTotal, balanceRatio or null).
+- [x] **4.2** Add a `node.getById` procedure: returns a single node with its children (ordered by createdAt ascending), applied tags, attachments (ordered by createdAt ascending), and computed aggregation data (tailwindTotal, headwindTotal, balanceRatio or null).
   — *Why: The side panel needs full node details including children for aggregation display. Ordering specs: children by creation time oldest-first (spec 004), attachments by creation order (spec 008).*
 
-- [ ] **4.3** Add a `node.update` procedure: accepts partial updates to statement, body, strength, and polarity. Enforce root node constraints: reject strength and polarity updates for the root node (parentId = null). When updating the root node's statement, also update `Map.thesisStatement` in the same transaction.
+- [x] **4.3** Add a `node.update` procedure: accepts partial updates to statement, body, strength, and polarity. Enforce root node constraints: reject strength and polarity updates for the root node (parentId = null). When updating the root node's statement, also update `Map.thesisStatement` in the same transaction.
   — *Why: Spec 003 requires root to have no polarity or strength, and that root statement and map thesis stay in sync. A transaction ensures consistency.*
 
-- [ ] **4.4** Add a `node.delete` procedure: recursively counts all descendants first and returns the count along with a "pending" status so the frontend can show confirmation. After confirmation, deletes the entire subtree. Reject deletion of the root node — return an error directing the user to delete the map instead. Confirmation is required for ALL deletions including leaf nodes (spec 004).
+- [x] **4.4** Add a `node.delete` procedure: recursively counts all descendants first and returns the count along with a "pending" status so the frontend can show confirmation. After confirmation, deletes the entire subtree. Reject deletion of the root node — return an error directing the user to delete the map instead. Confirmation is required for ALL deletions including leaf nodes (spec 004).
   — *Why: Spec 004 requires confirmation for every deletion with descendant count. Root deletion is handled via map management to prevent orphan maps.*
 
-- [ ] **4.5** Ensure all queries returning children order them by `createdAt` ascending (oldest first). This applies to `node.getById`, `map.getById`, and any other procedure returning child lists.
-  — *Why: Spec 004 defines sibling ordering as creation-time ascending. No manual reordering for MVP.*
+- [x] **4.5** Ensure all queries returning children order them by `createdAt` ascending (oldest first). This applies to `node.getById`, `map.getById`, and any other procedure returning child lists.
+  — *Why: Spec 004 defines sibling ordering as creation-time ascending. No manual reordering for MVP.* *(Both `node.getById` and `map.getById` order children by `createdAt: "asc"`.)*
 
 ### 5. Tag CRUD API (spec: 005)
 > Tags are map-global and independent of node hierarchy. They need maps to exist but not specific nodes.
