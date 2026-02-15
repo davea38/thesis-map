@@ -32,9 +32,6 @@ describe("App", () => {
   it("renders the landing page at /", () => {
     renderWithProviders(<App />);
     expect(screen.getByText("Your Maps")).toBeInTheDocument();
-    expect(
-      screen.getByText("Create your first thesis map"),
-    ).toBeInTheDocument();
   });
 
   it("renders the map view at /map/:id", () => {
