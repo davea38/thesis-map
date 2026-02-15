@@ -41,3 +41,4 @@ Name and thesis statement are separate fields. The name is for the user's organi
 - The user can delete a map
 - Deleting a map shows a **confirmation dialog** naming the map and warning that all data will be lost
 - Deletion removes the map and all of its nodes, tags, and attachments
+- Maps can be deleted from the landing page or when editing the map

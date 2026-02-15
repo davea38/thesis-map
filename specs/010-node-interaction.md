@@ -61,10 +61,12 @@ The side panel opens when a node is selected and provides full editing capabilit
 
 ### Attachments
 
-- **Add** citations or note attachments
+- **Add** source or note attachments
 - **Edit** existing attachments in place
 - **Remove** existing attachments
 - View all attachments associated with the node
+- Source cards display **auto-fetched preview metadata** (favicon, site name, title, description, image) with loading and error states. See `012-sources.md` for card states and actions.
+- Clicking the **source count badge** on a node in the canvas opens the side panel scrolled to the attachments section
 
 ### Aggregation
 

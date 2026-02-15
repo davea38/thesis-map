@@ -20,6 +20,7 @@ Each node on the map displays:
 - **Statement text** — truncated with ellipsis if longer than the node can display. Full text is visible in the side panel.
 - **Balance bar** — shown if the node has children (and at least one child contributes to aggregation)
 - **Tag chips** — small color-coded badges for each tag applied to the node
+- **Source badge** — a small count badge at the bottom-right of the node showing a link icon and source count (e.g., `🔗 3`). Only visible when the node has >= 1 source attachment. See `012-sources.md` for full details.
 
 ## Visual Indicators
 
