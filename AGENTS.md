@@ -27,4 +27,8 @@
 
 ## Learnings
 
-(none yet - Claude will add entries here as it learns about the project)
+- Server exports `AppRouter` type via `"exports": { "./router": "./src/router.ts" }` in `server/package.json`. Client imports it as `import type { AppRouter } from "server/router"`.
+- Client has `server` as a workspace devDependency for type-only imports.
+- tRPC v11.10.0 is used. Client uses `createTRPCReact` and `httpBatchLink`.
+- Client type checking (`tsc -b` in client/) also checks server source files transitively. Keep server code clean of unused imports.
+- Client TypeScript uses `noUnusedLocals` and `noUnusedParameters` (strict).

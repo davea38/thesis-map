@@ -2,6 +2,9 @@
   "name": "server",
   "private": true,
   "type": "module",
+  "exports": {
+    "./router": "./src/router.ts"
+  },
   "scripts": {
     "dev": "bun run --watch src/index.ts",
     "build": "bun build src/index.ts --outdir dist --target bun",
