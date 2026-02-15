@@ -175,14 +175,14 @@ The following gaps were identified and addressed in this revision:
 - [x] **10.2** Create the landing page component (`/`): fetch and display all maps sorted by last-modified using `map.list`, showing name, thesis statement, and last-modified timestamp for each. Each map entry links to `/map/:id`.
   — *Why: This is the app's home screen and the only way to navigate to a map.* *(Implemented in `client/src/pages/landing-page.tsx` using `trpc.map.list.useQuery()`. Shows loading skeleton, error state, empty state with create prompt, and map list with relative timestamps. `formatRelativeTime` utility in `client/src/lib/format-time.ts`. 5 landing page tests and 6 format-time tests.)*
 
-- [ ] **10.3** Implement the "Create Map" dialog: a modal form prompting for map name and thesis statement (both required), with validation. On submit, calls `map.create` and navigates to the new map's view at `/map/:id`.
-  — *Why: Users need to create maps before they can do anything else in the app. Both fields are required per spec 002.*
+- [x] **10.3** Implement the "Create Map" dialog: a modal form prompting for map name and thesis statement (both required), with validation. On submit, calls `map.create` and navigates to the new map's view at `/map/:id`.
+  — *Why: Users need to create maps before they can do anything else in the app. Both fields are required per spec 002.* *(Implemented as `CreateMapDialog` component in `client/src/components/create-map-dialog.tsx` using shadcn/ui Dialog, Button, Input, Label. Installed shadcn/ui components in `client/src/components/ui/`. Form validates both fields non-empty (trims whitespace), shows inline errors, clears errors on typing. On success, invalidates map list cache and navigates to `/map/:id`. Shows "Creating..." disabled state during submission. Form resets on reopen. Integrated into landing page header ("New Map" button) and empty state ("Create your first thesis map" button). 9 tests in `create-map-dialog.test.tsx`.)*
 
 - [ ] **10.4** Implement map deletion from the landing page: a delete button per map that opens a confirmation dialog naming the specific map and warning that all data will be lost. On confirm, calls `map.delete` and removes the map from the list.
   — *Why: Spec 002 requires confirmation before destroying data. The dialog must name the map being deleted so the user knows exactly what they are losing.*
 
 - [x] **10.5** Implement the empty state: when `map.list` returns zero maps, display a friendly message and a prominent "Create your first thesis map" button that opens the create dialog.
-  — *Why: Spec 002 explicitly defines the empty state UX to guide new users.* *(Implemented as part of task 10.2 — the landing page renders an empty state with message and create button when `maps.length === 0`. The button currently links to `/map/new`; it will open the Create Map dialog once task 10.3 is implemented.)*
+  — *Why: Spec 002 explicitly defines the empty state UX to guide new users.* *(Implemented as part of task 10.2. Updated in task 10.3 to open the CreateMapDialog instead of linking to `/map/new`.)*
 
 - [ ] **10.6** Add inline editing of the map name from the landing page: clicking the name transforms it into an editable text field, with changes autosaved via the debounced mutation pattern from task 8.
   — *Why: Spec 002 says the map name can be edited from the landing page. Uses the shared autosave infrastructure.*

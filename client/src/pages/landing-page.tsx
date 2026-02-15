@@ -1,6 +1,8 @@
 import { Link } from "react-router-dom";
 import { trpc } from "@/lib/trpc";
 import { formatRelativeTime } from "@/lib/format-time";
+import { CreateMapDialog } from "@/components/create-map-dialog";
+import { Button } from "@/components/ui/button";
 
 export function LandingPage() {
   const { data: maps, isLoading, error } = trpc.map.list.useQuery();
@@ -9,6 +11,9 @@ export function LandingPage() {
     <div className="mx-auto max-w-3xl px-4 py-8">
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold">Your Maps</h1>
+        <CreateMapDialog>
+          <Button size="sm">New Map</Button>
+        </CreateMapDialog>
       </div>
 
       {isLoading && (
@@ -37,12 +42,9 @@ export function LandingPage() {
           <p className="text-lg text-muted-foreground">
             No thesis maps yet. Create one to start structuring your arguments.
           </p>
-          <Link
-            to="/map/new"
-            className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-          >
-            Create your first thesis map
-          </Link>
+          <CreateMapDialog>
+            <Button>Create your first thesis map</Button>
+          </CreateMapDialog>
         </div>
       )}
 
