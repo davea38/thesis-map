@@ -147,11 +147,13 @@ describe("SidePanel", () => {
   });
 
   describe("node data display", () => {
-    it("shows statement section with statement text", () => {
+    it("shows statement section with statement input", () => {
       renderSidePanel({ nodeData: mockNode });
       const section = screen.getByTestId("section-statement");
       expect(section).toBeInTheDocument();
-      expect(within(section).getByText("Test statement")).toBeInTheDocument();
+      const input = within(section).getByTestId("statement-input") as HTMLInputElement;
+      expect(input).toBeInTheDocument();
+      expect(input.value).toBe("Test statement");
     });
 
     it("shows body section", () => {
@@ -176,13 +178,13 @@ describe("SidePanel", () => {
       expect(screen.queryByTestId("section-properties")).not.toBeInTheDocument();
     });
 
-    it("shows '(map thesis)' label for root node statement", () => {
+    it("shows map thesis hint label for root node statement", () => {
       renderSidePanel({
         selectedNodeId: "root-1",
         nodeData: mockRootNode,
         nodeQueryKey: "root-1",
       });
-      expect(screen.getByText("(map thesis)")).toBeInTheDocument();
+      expect(screen.getByText(/map thesis.*edits update the map title/)).toBeInTheDocument();
     });
 
     it("shows tags section with tag chips", () => {
@@ -213,6 +215,57 @@ describe("SidePanel", () => {
     });
   });
 
+  describe("statement editing", () => {
+    it("renders a text input for the statement", () => {
+      renderSidePanel({ nodeData: mockNode });
+      const input = screen.getByTestId("statement-input") as HTMLInputElement;
+      expect(input).toBeInTheDocument();
+      expect(input.tagName).toBe("INPUT");
+      expect(input.type).toBe("text");
+      expect(input.value).toBe("Test statement");
+    });
+
+    it("allows typing in the statement input", async () => {
+      const { user } = renderSidePanel({ nodeData: mockNode });
+      const input = screen.getByTestId("statement-input") as HTMLInputElement;
+
+      await user.clear(input);
+      await user.type(input, "Updated statement");
+
+      expect(input.value).toBe("Updated statement");
+    });
+
+    it("shows placeholder when statement is empty", () => {
+      renderSidePanel({ nodeData: { ...mockNode, statement: "" } });
+      const input = screen.getByTestId("statement-input") as HTMLInputElement;
+      expect(input.placeholder).toBe("Enter statement...");
+    });
+
+    it("shows root node thesis label for root node statement", () => {
+      renderSidePanel({
+        selectedNodeId: "root-1",
+        nodeData: mockRootNode,
+        nodeQueryKey: "root-1",
+      });
+      expect(screen.getByText(/map thesis.*edits update the map title/)).toBeInTheDocument();
+    });
+
+    it("does not show thesis label for non-root nodes", () => {
+      renderSidePanel({ nodeData: mockNode });
+      expect(screen.queryByText(/map thesis/)).not.toBeInTheDocument();
+    });
+
+    it("pre-fills the root node statement in the input", () => {
+      renderSidePanel({
+        selectedNodeId: "root-1",
+        nodeData: mockRootNode,
+        nodeQueryKey: "root-1",
+      });
+      const input = screen.getByTestId("statement-input") as HTMLInputElement;
+      expect(input.value).toBe("This is the thesis");
+    });
+  });
+
   describe("aggregation section", () => {
     it("shows aggregation section when node has aggregation data", () => {
       renderSidePanel({
@@ -235,10 +288,6 @@ describe("SidePanel", () => {
   describe("header", () => {
     it("shows node statement in header for non-root nodes", () => {
       renderSidePanel({ nodeData: mockNode });
-      // Statement appears in header h2 — use getAllByText since it also appears in the body
-      const elements = screen.getAllByText("Test statement");
-      expect(elements.length).toBeGreaterThanOrEqual(1);
-      // The header h2 should contain the statement
       const header = screen.getByRole("heading", { level: 2 });
       expect(header).toHaveTextContent("Test statement");
     });

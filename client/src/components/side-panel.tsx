@@ -1,8 +1,9 @@
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useState } from "react";
 import { X } from "lucide-react";
 import { useUIStore } from "@/stores/ui-store";
 import { trpc } from "@/lib/trpc";
 import { getPolarityColors } from "@/lib/colors";
+import { useDebouncedMutation } from "@/hooks/use-debounced-mutation";
 
 export function SidePanel() {
   const selectedNodeId = useUIStore((s) => s.selectedNodeId);
@@ -37,6 +38,38 @@ export function SidePanel() {
   const { data: nodeData, isLoading } = trpc.node.getById.useQuery(
     { id: selectedNodeId! },
     { enabled: !!selectedNodeId && sidePanelOpen },
+  );
+
+  const utils = trpc.useUtils();
+
+  // Statement editing state
+  const [statementValue, setStatementValue] = useState("");
+
+  // Sync local statement with server data when node changes
+  useEffect(() => {
+    if (nodeData) {
+      setStatementValue(nodeData.statement);
+    }
+  }, [nodeData]);
+
+  const updateNodeMutation = trpc.node.update.useMutation();
+
+  const debouncedStatementUpdate = useDebouncedMutation(updateNodeMutation, {
+    delay: 1500,
+    onSuccess: () => {
+      utils.node.getById.invalidate();
+      utils.map.getById.invalidate();
+    },
+  });
+
+  const handleStatementChange = useCallback(
+    (value: string) => {
+      setStatementValue(value);
+      if (selectedNodeId) {
+        debouncedStatementUpdate.mutate({ id: selectedNodeId, statement: value });
+      }
+    },
+    [selectedNodeId, debouncedStatementUpdate],
   );
 
   if (!sidePanelOpen || !selectedNodeId) {
@@ -121,13 +154,18 @@ export function SidePanel() {
                   Statement
                   {isRoot && (
                     <span className="ml-1 text-[10px] normal-case tracking-normal text-muted-foreground/70">
-                      (map thesis)
+                      (map thesis — edits update the map title)
                     </span>
                   )}
                 </h3>
-                <p className="text-sm">
-                  {node.statement || "(untitled)"}
-                </p>
+                <input
+                  type="text"
+                  value={statementValue}
+                  onChange={(e) => handleStatementChange(e.target.value)}
+                  placeholder="Enter statement..."
+                  className="w-full rounded-md border border-border bg-transparent px-3 py-1.5 text-sm outline-none focus:border-ring focus:ring-1 focus:ring-ring"
+                  data-testid="statement-input"
+                />
               </section>
 
               {/* Body section */}
