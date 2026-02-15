@@ -1,5 +1,5 @@
-import { useMemo, useCallback } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useMemo, useCallback, useState } from "react";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import {
   ReactFlow,
   Background,
@@ -12,6 +12,17 @@ import { computeRadialLayout } from "@/lib/radial-layout";
 import { ThesisNode } from "@/components/thesis-node";
 import { PolarityEdge } from "@/components/polarity-edge";
 import { SidePanel } from "@/components/side-panel";
+import { NodeContextMenu } from "@/components/node-context-menu";
+import { DeleteNodeDialog } from "@/components/delete-node-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { useUIStore } from "@/stores/ui-store";
 
 type MapNode = {
@@ -40,19 +51,55 @@ const edgeTypes = { polarity: PolarityEdge };
 
 export function MapView() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const selectedNodeId = useUIStore((s) => s.selectedNodeId);
   const selectNode = useUIStore((s) => s.selectNode);
   const clearSelection = useUIStore((s) => s.clearSelection);
   const setInlineEditNodeId = useUIStore((s) => s.setInlineEditNodeId);
+  const openContextMenu = useUIStore((s) => s.openContextMenu);
+  const closeContextMenu = useUIStore((s) => s.closeContextMenu);
+
+  const [deleteNodeId, setDeleteNodeId] = useState<string | null>(null);
+  const [deleteMapOpen, setDeleteMapOpen] = useState(false);
 
   const { data: map, isLoading, error } = trpc.map.getById.useQuery(
     { id: id! },
     { enabled: !!id },
   );
 
+  const utils = trpc.useUtils();
+
+  const deleteMapMutation = trpc.map.delete.useMutation({
+    onSuccess: () => {
+      utils.map.list.invalidate();
+      navigate("/");
+    },
+  });
+
   const { rfNodes: layoutNodes, rfEdges } = useMemo(() => {
     if (!map) return { rfNodes: [], rfEdges: [] };
     return computeRadialLayout(map.nodes as MapNode[]);
+  }, [map]);
+
+  // Build a lookup map for node data (used by context menu)
+  const nodeDataMap = useMemo(() => {
+    if (!map) return new Map();
+    const m = new Map<
+      string,
+      {
+        id: string;
+        parentId: string | null;
+        tags: Array<{ id: string; name: string; color: string }>;
+      }
+    >();
+    for (const node of map.nodes as MapNode[]) {
+      m.set(node.id, {
+        id: node.id,
+        parentId: node.parentId,
+        tags: node.tags,
+      });
+    }
+    return m;
   }, [map]);
 
   // Sync React Flow's selected state with Zustand store
@@ -77,10 +124,41 @@ export function MapView() {
     [setInlineEditNodeId],
   );
 
+  const onNodeContextMenu: NodeMouseHandler = useCallback(
+    (event, node) => {
+      event.preventDefault();
+      openContextMenu({
+        x: event.clientX,
+        y: event.clientY,
+        nodeId: node.id,
+      });
+    },
+    [openContextMenu],
+  );
+
   const onPaneClick = useCallback(() => {
     clearSelection();
     setInlineEditNodeId(null);
-  }, [clearSelection, setInlineEditNodeId]);
+    closeContextMenu();
+  }, [clearSelection, setInlineEditNodeId, closeContextMenu]);
+
+  const handleDeleteRequest = useCallback(
+    (nodeId: string) => {
+      const nodeData = nodeDataMap.get(nodeId);
+      if (nodeData && nodeData.parentId === null) {
+        // Root node — redirect to map deletion
+        setDeleteMapOpen(true);
+      } else {
+        setDeleteNodeId(nodeId);
+      }
+    },
+    [nodeDataMap],
+  );
+
+  const handleConfirmDeleteMap = useCallback(() => {
+    if (!id) return;
+    deleteMapMutation.mutate({ id });
+  }, [id, deleteMapMutation]);
 
   if (isLoading) {
     return (
@@ -124,6 +202,7 @@ export function MapView() {
         edgeTypes={edgeTypes}
         onNodeClick={onNodeClick}
         onNodeDoubleClick={onNodeDoubleClick}
+        onNodeContextMenu={onNodeContextMenu}
         onPaneClick={onPaneClick}
         fitView
         fitViewOptions={{ padding: 0.3 }}
@@ -135,6 +214,47 @@ export function MapView() {
         <Controls />
       </ReactFlow>
       <SidePanel />
+      {map && (
+        <NodeContextMenu
+          mapId={map.id}
+          nodes={nodeDataMap}
+          onDeleteRequest={handleDeleteRequest}
+        />
+      )}
+      <DeleteNodeDialog
+        nodeId={deleteNodeId}
+        onClose={() => setDeleteNodeId(null)}
+      />
+      {/* Map deletion confirmation dialog (for root node delete) */}
+      <Dialog open={deleteMapOpen} onOpenChange={setDeleteMapOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete map?</DialogTitle>
+            <DialogDescription>
+              This will permanently delete the map{" "}
+              <strong>&quot;{map?.name}&quot;</strong> and all its nodes, tags,
+              and attachments. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteMapOpen(false)}
+              disabled={deleteMapMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmDeleteMap}
+              disabled={deleteMapMutation.isPending}
+              data-testid="confirm-delete-map"
+            >
+              {deleteMapMutation.isPending ? "Deleting..." : "Delete map"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
