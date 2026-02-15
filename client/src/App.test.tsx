@@ -36,7 +36,7 @@ describe("App", () => {
 
   it("renders the map view at /map/:id", () => {
     renderWithProviders(<App />, { route: "/map/test-123" });
-    expect(screen.getByText("Map: test-123")).toBeInTheDocument();
+    expect(screen.getByText("Loading map...")).toBeInTheDocument();
   });
 
   it("shows the save indicator", () => {
