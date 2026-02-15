@@ -10,6 +10,7 @@ import "@xyflow/react/dist/style.css";
 import { trpc } from "@/lib/trpc";
 import { computeRadialLayout } from "@/lib/radial-layout";
 import { ThesisNode } from "@/components/thesis-node";
+import { SidePanel } from "@/components/side-panel";
 import { useUIStore } from "@/stores/ui-store";
 
 type MapNode = {
@@ -104,7 +105,7 @@ export function MapView() {
   }
 
   return (
-    <div className="h-[calc(100vh-3rem)] w-full">
+    <div className="h-[calc(100vh-3rem)] w-full relative">
       <ReactFlow
         nodes={rfNodes}
         edges={rfEdges}
@@ -120,6 +121,7 @@ export function MapView() {
         <Background />
         <Controls />
       </ReactFlow>
+      <SidePanel />
     </div>
   );
 }
