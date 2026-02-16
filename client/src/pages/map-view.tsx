@@ -1,4 +1,4 @@
-import { useMemo, useCallback, useState } from "react";
+import { useMemo, useCallback, useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import {
   ReactFlow,
@@ -138,6 +138,67 @@ export function MapView() {
     },
     [nodeDataMap],
   );
+
+  // Read inline edit and context menu state for keyboard shortcut guards
+  const inlineEditNodeId = useUIStore((s) => s.inlineEditNodeId);
+  const contextMenuState = useUIStore((s) => s.contextMenuState);
+
+  // Keyboard shortcuts (spec 010):
+  // Escape — deselect and close side panel
+  // Delete/Backspace — delete selected node (with confirmation)
+  // Enter — activate inline edit on selected node
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      // Don't intercept when typing in form fields
+      const target = e.target as HTMLElement;
+      if (
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.isContentEditable
+      ) {
+        return;
+      }
+
+      // Don't intercept when inline edit is active
+      if (inlineEditNodeId) return;
+
+      // Don't intercept when context menu is open
+      if (contextMenuState) return;
+
+      if (e.key === "Escape") {
+        if (selectedNodeId) {
+          e.preventDefault();
+          clearSelection();
+        }
+        return;
+      }
+
+      // Remaining shortcuts require a selected node
+      if (!selectedNodeId) return;
+
+      if (e.key === "Delete" || e.key === "Backspace") {
+        e.preventDefault();
+        handleDeleteRequest(selectedNodeId);
+        return;
+      }
+
+      if (e.key === "Enter") {
+        e.preventDefault();
+        setInlineEditNodeId(selectedNodeId);
+        return;
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [
+    selectedNodeId,
+    inlineEditNodeId,
+    contextMenuState,
+    clearSelection,
+    handleDeleteRequest,
+    setInlineEditNodeId,
+  ]);
 
   if (isLoading) {
     return (
