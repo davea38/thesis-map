@@ -696,6 +696,12 @@ describe("SidePanel", () => {
       expect(screen.getByText("Tag name is required")).toBeInTheDocument();
     });
 
+    it("shows 'Manage' button for map-wide tag management", () => {
+      renderSidePanel({ nodeData: mockNode, mapTags: mockMapTags });
+      expect(screen.getByTestId("manage-tags-button")).toBeInTheDocument();
+      expect(screen.getByTestId("manage-tags-button")).toHaveTextContent("Manage");
+    });
+
     it("closes dropdown when clicking '+ Add tag' again", async () => {
       const { user } = renderSidePanel({ nodeData: mockNode, mapTags: mockMapTags });
 

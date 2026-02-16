@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback, useState } from "react";
-import { X, Plus } from "lucide-react";
+import { X, Plus, Settings } from "lucide-react";
 import { useUIStore } from "@/stores/ui-store";
 import { trpc } from "@/lib/trpc";
 import {
@@ -12,6 +12,7 @@ import {
 import { useDebouncedMutation } from "@/hooks/use-debounced-mutation";
 import { SourceCard } from "./source-card";
 import { NoteCard } from "./note-card";
+import { ManageTagsDialog } from "./manage-tags-dialog";
 
 export function SidePanel() {
   const selectedNodeId = useUIStore((s) => s.selectedNodeId);
@@ -451,9 +452,21 @@ export function SidePanel() {
 
               {/* Tags section */}
               <section data-testid="section-tags">
-                <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
-                  Tags
-                </h3>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    Tags
+                  </h3>
+                  <ManageTagsDialog mapId={node.mapId}>
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-xs text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                      data-testid="manage-tags-button"
+                    >
+                      <Settings className="h-3 w-3" />
+                      Manage
+                    </button>
+                  </ManageTagsDialog>
+                </div>
 
                 {/* Applied tags as removable chips */}
                 {node.tags && node.tags.length > 0 ? (
