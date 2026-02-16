@@ -22,8 +22,32 @@ const mockNode = {
     { id: "t1", name: "Economic", color: "#3b82f6" },
   ],
   attachments: [
-    { id: "a1", type: "source", url: "https://example.com", noteText: null },
-    { id: "a2", type: "note", url: null, noteText: "A note" },
+    {
+      id: "a1",
+      type: "source",
+      url: "https://example.com",
+      noteText: null as string | null,
+      previewTitle: "Example Site" as string | null,
+      previewDescription: "An example website for testing" as string | null,
+      previewImageUrl: "https://example.com/image.png" as string | null,
+      previewFaviconUrl: "https://example.com/favicon.ico" as string | null,
+      previewSiteName: "Example" as string | null,
+      previewFetchStatus: "success" as string | null,
+      previewFetchError: null as string | null,
+    },
+    {
+      id: "a2",
+      type: "note",
+      url: null as string | null,
+      noteText: "A note" as string | null,
+      previewTitle: null as string | null,
+      previewDescription: null as string | null,
+      previewImageUrl: null as string | null,
+      previewFaviconUrl: null as string | null,
+      previewSiteName: null as string | null,
+      previewFetchStatus: null as string | null,
+      previewFetchError: null as string | null,
+    },
   ],
   aggregation: null as { tailwindTotal: number; headwindTotal: number; balanceRatio: number } | null,
   children: [] as unknown[],
@@ -227,11 +251,11 @@ describe("SidePanel", () => {
       expect(screen.getByTestId("add-tag-button")).toBeInTheDocument();
     });
 
-    it("shows attachments section with attachment list", () => {
+    it("shows attachments section with source card and note card", () => {
       renderSidePanel({ nodeData: mockNode });
       expect(screen.getByTestId("section-attachments")).toBeInTheDocument();
-      expect(screen.getByText("https://example.com")).toBeInTheDocument();
-      expect(screen.getByText("A note")).toBeInTheDocument();
+      expect(screen.getByTestId("source-card-a1")).toBeInTheDocument();
+      expect(screen.getByTestId("note-card-a2")).toBeInTheDocument();
     });
 
     it("shows 'No attachments.' when node has no attachments", () => {
@@ -740,6 +764,198 @@ describe("SidePanel", () => {
       await user.click(blueColor);
       expect(blueColor.style.borderColor).toMatch(/^(#1e293b|rgb\(30,\s*41,\s*59\))$/);
       expect(firstColor.style.borderColor).toBe("transparent");
+    });
+  });
+
+  describe("attachment management", () => {
+    it("shows 'Add Source' and 'Add Note' buttons", () => {
+      renderSidePanel({ nodeData: mockNode });
+      expect(screen.getByTestId("add-source-button")).toBeInTheDocument();
+      expect(screen.getByTestId("add-note-button")).toBeInTheDocument();
+    });
+
+    it("shows add source form when 'Add Source' is clicked", async () => {
+      const { user } = renderSidePanel({ nodeData: mockNode });
+
+      expect(screen.queryByTestId("add-source-form")).not.toBeInTheDocument();
+
+      await user.click(screen.getByTestId("add-source-button"));
+
+      expect(screen.getByTestId("add-source-form")).toBeInTheDocument();
+      expect(screen.getByTestId("new-source-url-input")).toBeInTheDocument();
+    });
+
+    it("shows cancel and submit buttons in add source form", async () => {
+      const { user } = renderSidePanel({ nodeData: mockNode });
+
+      await user.click(screen.getByTestId("add-source-button"));
+
+      expect(screen.getByTestId("cancel-add-source")).toBeInTheDocument();
+      expect(screen.getByTestId("submit-add-source")).toBeInTheDocument();
+    });
+
+    it("closes add source form when cancel is clicked", async () => {
+      const { user } = renderSidePanel({ nodeData: mockNode });
+
+      await user.click(screen.getByTestId("add-source-button"));
+      expect(screen.getByTestId("add-source-form")).toBeInTheDocument();
+
+      await user.click(screen.getByTestId("cancel-add-source"));
+      expect(screen.queryByTestId("add-source-form")).not.toBeInTheDocument();
+    });
+
+    it("shows error when submitting empty URL", async () => {
+      const { user } = renderSidePanel({ nodeData: mockNode });
+
+      await user.click(screen.getByTestId("add-source-button"));
+      await user.click(screen.getByTestId("submit-add-source"));
+
+      expect(screen.getByTestId("new-source-error")).toBeInTheDocument();
+      expect(screen.getByText("URL is required")).toBeInTheDocument();
+    });
+
+    it("clears error when typing in URL input", async () => {
+      const { user } = renderSidePanel({ nodeData: mockNode });
+
+      await user.click(screen.getByTestId("add-source-button"));
+      await user.click(screen.getByTestId("submit-add-source"));
+      expect(screen.getByTestId("new-source-error")).toBeInTheDocument();
+
+      await user.type(screen.getByTestId("new-source-url-input"), "h");
+      expect(screen.queryByTestId("new-source-error")).not.toBeInTheDocument();
+    });
+
+    it("renders source cards for source attachments", () => {
+      renderSidePanel({ nodeData: mockNode });
+      expect(screen.getByTestId("source-card-a1")).toBeInTheDocument();
+    });
+
+    it("renders note cards for note attachments", () => {
+      renderSidePanel({ nodeData: mockNode });
+      expect(screen.getByTestId("note-card-a2")).toBeInTheDocument();
+    });
+
+    it("shows source card in success state with preview data", () => {
+      renderSidePanel({ nodeData: mockNode });
+      const card = screen.getByTestId("source-card-a1");
+      expect(within(card).getByTestId("source-card-success")).toBeInTheDocument();
+      expect(within(card).getByTestId("source-preview-title")).toHaveTextContent("Example Site");
+      expect(within(card).getByTestId("source-preview-description")).toHaveTextContent("An example website for testing");
+    });
+
+    it("shows source card in loading state when preview is pending", () => {
+      const pendingSource = {
+        id: "a-pending",
+        type: "source",
+        url: "https://example.com",
+        noteText: null,
+        previewTitle: null,
+        previewDescription: null,
+        previewImageUrl: null,
+        previewFaviconUrl: null,
+        previewSiteName: null,
+        previewFetchStatus: "pending",
+        previewFetchError: null,
+      };
+      const nodeWithPendingSource = {
+        ...mockNode,
+        attachments: [pendingSource],
+      };
+      renderSidePanel({ nodeData: nodeWithPendingSource });
+      expect(screen.getByTestId("source-card-loading")).toBeInTheDocument();
+    });
+
+    it("shows source card in failed state with error and retry button", () => {
+      const failedSource = {
+        id: "a-failed",
+        type: "source",
+        url: "https://example.com",
+        noteText: null,
+        previewTitle: null,
+        previewDescription: null,
+        previewImageUrl: null,
+        previewFaviconUrl: null,
+        previewSiteName: null,
+        previewFetchStatus: "failed",
+        previewFetchError: "HTTP 404 Not Found",
+      };
+      const nodeWithFailedSource = {
+        ...mockNode,
+        attachments: [failedSource],
+      };
+      renderSidePanel({ nodeData: nodeWithFailedSource });
+      expect(screen.getByTestId("source-card-failed")).toBeInTheDocument();
+      expect(screen.getByText("Preview unavailable")).toBeInTheDocument();
+      expect(screen.getByText("HTTP 404 Not Found")).toBeInTheDocument();
+      expect(screen.getByTestId("source-retry-button")).toBeInTheDocument();
+    });
+
+    it("shows source card action buttons (edit URL, refresh, open, remove)", () => {
+      renderSidePanel({ nodeData: mockNode });
+      const card = screen.getByTestId("source-card-a1");
+      expect(within(card).getByTestId("source-edit-url-a1")).toBeInTheDocument();
+      expect(within(card).getByTestId("source-refresh-a1")).toBeInTheDocument();
+      expect(within(card).getByTestId("source-open-url-a1")).toBeInTheDocument();
+      expect(within(card).getByTestId("source-remove-a1")).toBeInTheDocument();
+    });
+
+    it("shows URL edit input when edit URL is clicked", async () => {
+      const { user } = renderSidePanel({ nodeData: mockNode });
+
+      await user.click(screen.getByTestId("source-edit-url-a1"));
+
+      expect(screen.getByTestId("source-url-input-a1")).toBeInTheDocument();
+      expect(screen.getByTestId("source-url-confirm-a1")).toBeInTheDocument();
+      expect(screen.getByTestId("source-url-cancel-a1")).toBeInTheDocument();
+    });
+
+    it("shows source URL link", () => {
+      renderSidePanel({ nodeData: mockNode });
+      expect(screen.getByTestId("source-url-link-a1")).toBeInTheDocument();
+      expect(screen.getByTestId("source-url-link-a1")).toHaveTextContent("https://example.com");
+    });
+
+    it("shows note text input for note attachments", () => {
+      renderSidePanel({ nodeData: mockNode });
+      const noteCard = screen.getByTestId("note-card-a2");
+      const textarea = within(noteCard).getByTestId("note-text-input-a2") as HTMLTextAreaElement;
+      expect(textarea).toBeInTheDocument();
+      expect(textarea.value).toBe("A note");
+    });
+
+    it("shows remove button on note cards", () => {
+      renderSidePanel({ nodeData: mockNode });
+      expect(screen.getByTestId("note-remove-a2")).toBeInTheDocument();
+    });
+
+    it("shows note input for source cards (user note)", () => {
+      renderSidePanel({ nodeData: mockNode });
+      expect(screen.getByTestId("source-note-input-a1")).toBeInTheDocument();
+    });
+
+    it("shows attachment summary counts", () => {
+      renderSidePanel({ nodeData: mockNode });
+      expect(screen.getByText(/1 source/)).toBeInTheDocument();
+      expect(screen.getByText(/1 note/)).toBeInTheDocument();
+    });
+
+    it("shows scrollable container for attachment list", () => {
+      renderSidePanel({ nodeData: mockNode });
+      const section = screen.getByTestId("section-attachments");
+      const list = section.querySelector(".max-h-96.overflow-y-auto");
+      expect(list).toBeInTheDocument();
+    });
+
+    it("shows favicon image in success state when available", () => {
+      renderSidePanel({ nodeData: mockNode });
+      expect(screen.getByTestId("source-favicon")).toBeInTheDocument();
+    });
+
+    it("shows preview image with lazy loading attribute in success state", () => {
+      renderSidePanel({ nodeData: mockNode });
+      const img = screen.getByTestId("source-preview-image") as HTMLImageElement;
+      expect(img).toBeInTheDocument();
+      expect(img.getAttribute("loading")).toBe("lazy");
     });
   });
 

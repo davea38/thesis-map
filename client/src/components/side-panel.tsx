@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback, useState } from "react";
-import { X } from "lucide-react";
+import { X, Plus } from "lucide-react";
 import { useUIStore } from "@/stores/ui-store";
 import { trpc } from "@/lib/trpc";
 import {
@@ -10,6 +10,8 @@ import {
   type Polarity,
 } from "@/lib/colors";
 import { useDebouncedMutation } from "@/hooks/use-debounced-mutation";
+import { SourceCard } from "./source-card";
+import { NoteCard } from "./note-card";
 
 export function SidePanel() {
   const selectedNodeId = useUIStore((s) => s.selectedNodeId);
@@ -607,33 +609,11 @@ export function SidePanel() {
               </section>
 
               {/* Attachments section */}
-              <section ref={attachmentsRef} data-testid="section-attachments">
-                <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
-                  Attachments
-                </h3>
-                {node.attachments && node.attachments.length > 0 ? (
-                  <div className="space-y-2">
-                    {node.attachments.map((attachment: { id: string; type: string; url?: string | null; noteText?: string | null }) => (
-                      <div
-                        key={attachment.id}
-                        className="rounded-md border p-2 text-sm"
-                      >
-                        {attachment.type === "source" ? (
-                          <span className="text-muted-foreground truncate block">
-                            {attachment.url || "No URL"}
-                          </span>
-                        ) : (
-                          <span className="text-muted-foreground">
-                            {attachment.noteText || "Empty note"}
-                          </span>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">No attachments.</p>
-                )}
-              </section>
+              <AttachmentsSection
+                attachmentsRef={attachmentsRef}
+                nodeId={selectedNodeId}
+                attachments={node.attachments ?? []}
+              />
 
               {/* Aggregation section */}
               {node.aggregation && (
@@ -674,5 +654,256 @@ export function SidePanel() {
         <div className="md:hidden absolute top-2 left-1/2 -translate-x-1/2 w-10 h-1 rounded-full bg-muted-foreground/30" />
       </div>
     </>
+  );
+}
+
+interface AttachmentData {
+  id: string;
+  type: string;
+  url?: string | null;
+  noteText?: string | null;
+  previewTitle?: string | null;
+  previewDescription?: string | null;
+  previewImageUrl?: string | null;
+  previewFaviconUrl?: string | null;
+  previewSiteName?: string | null;
+  previewFetchStatus?: string | null;
+  previewFetchError?: string | null;
+}
+
+function AttachmentsSection({
+  attachmentsRef,
+  nodeId,
+  attachments,
+}: {
+  attachmentsRef: React.RefObject<HTMLDivElement | null>;
+  nodeId: string;
+  attachments: AttachmentData[];
+}) {
+  const [isAddingSource, setIsAddingSource] = useState(false);
+  const [newSourceUrl, setNewSourceUrl] = useState("");
+  const [newSourceError, setNewSourceError] = useState("");
+  const sourceUrlInputRef = useRef<HTMLInputElement>(null);
+  const utils = trpc.useUtils();
+
+  const createMutation = trpc.attachment.create.useMutation({
+    onSuccess: () => {
+      utils.node.getById.invalidate();
+      utils.map.getById.invalidate();
+      setNewSourceUrl("");
+      setNewSourceError("");
+      setIsAddingSource(false);
+    },
+    onError: (err) => {
+      setNewSourceError(err.message);
+    },
+  });
+
+  const createNoteMutation = trpc.attachment.create.useMutation({
+    onSuccess: () => {
+      utils.node.getById.invalidate();
+      utils.map.getById.invalidate();
+    },
+  });
+
+  const deleteMutation = trpc.attachment.delete.useMutation({
+    onSuccess: () => {
+      utils.node.getById.invalidate();
+      utils.map.getById.invalidate();
+    },
+  });
+
+  // Focus URL input when adding source
+  useEffect(() => {
+    if (isAddingSource) {
+      setTimeout(() => sourceUrlInputRef.current?.focus(), 0);
+    }
+  }, [isAddingSource]);
+
+  // Reset form state when node changes
+  useEffect(() => {
+    setIsAddingSource(false);
+    setNewSourceUrl("");
+    setNewSourceError("");
+  }, [nodeId]);
+
+  const handleAddSource = useCallback(() => {
+    setIsAddingSource(true);
+    setNewSourceError("");
+  }, []);
+
+  const handleSubmitSource = useCallback(() => {
+    const trimmed = newSourceUrl.trim();
+    if (!trimmed) {
+      setNewSourceError("URL is required");
+      return;
+    }
+    createMutation.mutate({
+      nodeId,
+      type: "source",
+      url: trimmed,
+    });
+  }, [newSourceUrl, nodeId, createMutation]);
+
+  const handleSourceKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        handleSubmitSource();
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        setIsAddingSource(false);
+        setNewSourceUrl("");
+        setNewSourceError("");
+      }
+    },
+    [handleSubmitSource],
+  );
+
+  const handleAddNote = useCallback(() => {
+    createNoteMutation.mutate({
+      nodeId,
+      type: "note",
+      noteText: "New note",
+    });
+  }, [nodeId, createNoteMutation]);
+
+  const handleRemoveAttachment = useCallback(
+    (id: string) => {
+      deleteMutation.mutate({ id });
+    },
+    [deleteMutation],
+  );
+
+  const sources = attachments.filter((a) => a.type === "source");
+  const notes = attachments.filter((a) => a.type === "note");
+
+  return (
+    <section ref={attachmentsRef} data-testid="section-attachments">
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+          Attachments
+        </h3>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={handleAddSource}
+            className="inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-xs font-medium text-primary hover:bg-primary/10 transition-colors"
+            data-testid="add-source-button"
+          >
+            <Plus className="h-3 w-3" />
+            Source
+          </button>
+          <button
+            type="button"
+            onClick={handleAddNote}
+            className="inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-xs font-medium text-primary hover:bg-primary/10 transition-colors"
+            data-testid="add-note-button"
+          >
+            <Plus className="h-3 w-3" />
+            Note
+          </button>
+        </div>
+      </div>
+
+      {/* Add Source form */}
+      {isAddingSource && (
+        <div className="mb-2 rounded-md border p-2 space-y-1.5" data-testid="add-source-form">
+          <input
+            ref={sourceUrlInputRef}
+            type="text"
+            value={newSourceUrl}
+            onChange={(e) => {
+              setNewSourceUrl(e.target.value);
+              setNewSourceError("");
+            }}
+            onKeyDown={handleSourceKeyDown}
+            placeholder="Enter URL (e.g., example.com)"
+            className="w-full rounded border border-border bg-transparent px-2 py-1 text-xs outline-none focus:border-ring focus:ring-1 focus:ring-ring"
+            data-testid="new-source-url-input"
+          />
+          <div className="flex items-center justify-between">
+            <div>
+              {newSourceError && (
+                <p className="text-xs text-red-500" data-testid="new-source-error">
+                  {newSourceError}
+                </p>
+              )}
+            </div>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsAddingSource(false);
+                  setNewSourceUrl("");
+                  setNewSourceError("");
+                }}
+                className="rounded px-2 py-0.5 text-xs text-muted-foreground hover:bg-accent transition-colors"
+                data-testid="cancel-add-source"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSubmitSource}
+                disabled={createMutation.isPending}
+                className="rounded bg-primary px-2 py-0.5 text-xs text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
+                data-testid="submit-add-source"
+              >
+                {createMutation.isPending ? "Adding..." : "Add"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Attachment list */}
+      {attachments.length > 0 ? (
+        <div className="space-y-2 max-h-96 overflow-y-auto">
+          {/* Sources first, then notes — all in creation order */}
+          {attachments.map((attachment) =>
+            attachment.type === "source" ? (
+              <SourceCard
+                key={attachment.id}
+                attachment={{
+                  id: attachment.id,
+                  url: attachment.url ?? null,
+                  noteText: attachment.noteText ?? null,
+                  previewTitle: attachment.previewTitle ?? null,
+                  previewDescription: attachment.previewDescription ?? null,
+                  previewImageUrl: attachment.previewImageUrl ?? null,
+                  previewFaviconUrl: attachment.previewFaviconUrl ?? null,
+                  previewSiteName: attachment.previewSiteName ?? null,
+                  previewFetchStatus: attachment.previewFetchStatus ?? null,
+                  previewFetchError: attachment.previewFetchError ?? null,
+                }}
+                onRemove={handleRemoveAttachment}
+              />
+            ) : (
+              <NoteCard
+                key={attachment.id}
+                attachment={{
+                  id: attachment.id,
+                  noteText: attachment.noteText ?? null,
+                }}
+                onRemove={handleRemoveAttachment}
+              />
+            ),
+          )}
+        </div>
+      ) : !isAddingSource ? (
+        <p className="text-sm text-muted-foreground">No attachments.</p>
+      ) : null}
+
+      {/* Summary counts */}
+      {(sources.length > 0 || notes.length > 0) && (
+        <p className="text-xs text-muted-foreground mt-2">
+          {sources.length} source{sources.length !== 1 ? "s" : ""}
+          {notes.length > 0 && (
+            <>, {notes.length} note{notes.length !== 1 ? "s" : ""}</>
+          )}
+        </p>
+      )}
+    </section>
   );
 }
