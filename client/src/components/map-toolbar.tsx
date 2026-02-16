@@ -4,6 +4,7 @@ import { ChevronLeft, Trash2 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useDebouncedMutation } from "@/hooks/use-debounced-mutation";
 import { SaveIndicator } from "@/components/save-indicator";
+import { TagFilterPanel } from "@/components/tag-filter-panel";
 
 interface MapToolbarProps {
   mapId: string;
@@ -123,6 +124,10 @@ export function MapToolbar({ mapId, mapName, onDeleteRequest }: MapToolbarProps)
       <div className="h-4 w-px bg-border shrink-0" />
 
       <SaveIndicator />
+
+      <div className="h-4 w-px bg-border shrink-0" />
+
+      <TagFilterPanel mapId={mapId} />
 
       {onDeleteRequest && (
         <>

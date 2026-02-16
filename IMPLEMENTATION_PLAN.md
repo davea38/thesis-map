@@ -270,8 +270,8 @@ The following gaps were identified and addressed in this revision:
 ### 14. Tag Filtering (spec: 005)
 > Depends on tags existing and nodes being rendered on the canvas.
 
-- [ ] **14.1** Create a tag filter panel: a collapsible panel (in the toolbar or as a sidebar/drawer) listing all tags for the current map with checkboxes or toggle chips. Store active filter selections in the Zustand `activeTagFilters` state.
-  — *Why: Spec 005 requires users to filter the map view by tag to focus on specific aspects of their argument.*
+- [x] **14.1** Create a tag filter panel: a collapsible panel (in the toolbar or as a sidebar/drawer) listing all tags for the current map with checkboxes or toggle chips. Store active filter selections in the Zustand `activeTagFilters` state.
+  — *Why: Spec 005 requires users to filter the map view by tag to focus on specific aspects of their argument.* *(Implemented as `TagFilterPanel` component in `client/src/components/tag-filter-panel.tsx`. Dropdown panel triggered by a filter icon button in `MapToolbar`. Lists all map tags as toggle chips with color-coded badges and node counts. Active filters shown via `aria-pressed` and background highlight. Filter button shows active count badge and highlighted color when filters are active. "Clear all" button visible when any filter is active. Click-outside and Escape close the panel. Uses Zustand `activeTagFilters`, `toggleTagFilter`, and `clearTagFilters` from `ui-store`. 14 tests in `tag-filter-panel.test.tsx`.)*
 
 - [ ] **14.2** When tag filters are active, visually dim (reduce opacity to ~30-40%) nodes that do not have any of the selected tags. Nodes WITH at least one matching tag remain at full opacity. Edges follow their connected nodes' dimming. Aggregation remains completely unaffected by filters — all nodes always contribute to balance bars regardless of filter state.
   — *Why: Spec 005 specifies dimming, not hiding, so users retain spatial context. Aggregation ignores filters to preserve data integrity.*
