@@ -7,7 +7,7 @@ import { trpc } from "@/lib/trpc";
 import { httpBatchLink } from "@trpc/client";
 import { MapToolbar } from "./map-toolbar";
 
-function renderToolbar(props: { mapId?: string; mapName?: string } = {}) {
+function renderToolbar(props: { mapId?: string; mapName?: string; onDeleteRequest?: () => void } = {}) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
@@ -24,6 +24,7 @@ function renderToolbar(props: { mapId?: string; mapName?: string } = {}) {
           <MapToolbar
             mapId={props.mapId ?? "test-map-id"}
             mapName={props.mapName ?? "My Test Map"}
+            onDeleteRequest={props.onDeleteRequest}
           />
         </MemoryRouter>
       </QueryClientProvider>
@@ -167,5 +168,26 @@ describe("MapToolbar", () => {
     );
 
     expect(screen.getByText("Updated Name")).toBeInTheDocument();
+  });
+
+  describe("delete map button", () => {
+    it("renders delete button when onDeleteRequest is provided", () => {
+      renderToolbar({ onDeleteRequest: vi.fn() });
+      const deleteButton = screen.getByTestId("delete-map-button");
+      expect(deleteButton).toBeInTheDocument();
+      expect(deleteButton).toHaveAttribute("aria-label", "Delete map");
+    });
+
+    it("does not render delete button when onDeleteRequest is not provided", () => {
+      renderToolbar();
+      expect(screen.queryByTestId("delete-map-button")).not.toBeInTheDocument();
+    });
+
+    it("calls onDeleteRequest when delete button is clicked", async () => {
+      const onDeleteRequest = vi.fn();
+      const { user } = renderToolbar({ onDeleteRequest });
+      await user.click(screen.getByTestId("delete-map-button"));
+      expect(onDeleteRequest).toHaveBeenCalledTimes(1);
+    });
   });
 });

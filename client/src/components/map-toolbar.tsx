@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Link } from "react-router-dom";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, Trash2 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useDebouncedMutation } from "@/hooks/use-debounced-mutation";
 import { SaveIndicator } from "@/components/save-indicator";
@@ -8,9 +8,10 @@ import { SaveIndicator } from "@/components/save-indicator";
 interface MapToolbarProps {
   mapId: string;
   mapName: string;
+  onDeleteRequest?: () => void;
 }
 
-export function MapToolbar({ mapId, mapName }: MapToolbarProps) {
+export function MapToolbar({ mapId, mapName, onDeleteRequest }: MapToolbarProps) {
   const [nameValue, setNameValue] = useState(mapName);
   const [isEditing, setIsEditing] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -122,6 +123,22 @@ export function MapToolbar({ mapId, mapName }: MapToolbarProps) {
       <div className="h-4 w-px bg-border shrink-0" />
 
       <SaveIndicator />
+
+      {onDeleteRequest && (
+        <>
+          <div className="h-4 w-px bg-border shrink-0" />
+          <button
+            type="button"
+            onClick={onDeleteRequest}
+            className="flex items-center justify-center h-7 w-7 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors shrink-0"
+            data-testid="delete-map-button"
+            aria-label="Delete map"
+            title="Delete map"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        </>
+      )}
     </div>
   );
 }

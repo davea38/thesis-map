@@ -174,7 +174,7 @@ export function MapView() {
 
   return (
     <div className="h-[calc(100vh-3rem)] w-full relative">
-      <MapToolbar mapId={map.id} mapName={map.name} />
+      <MapToolbar mapId={map.id} mapName={map.name} onDeleteRequest={() => setDeleteMapOpen(true)} />
       <ReactFlow
         nodes={rfNodes}
         edges={rfEdges}
