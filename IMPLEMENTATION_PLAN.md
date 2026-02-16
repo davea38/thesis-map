@@ -184,8 +184,8 @@ The following gaps were identified and addressed in this revision:
 - [x] **10.5** Implement the empty state: when `map.list` returns zero maps, display a friendly message and a prominent "Create your first thesis map" button that opens the create dialog.
   — *Why: Spec 002 explicitly defines the empty state UX to guide new users.* *(Implemented as part of task 10.2. Updated in task 10.3 to open the CreateMapDialog instead of linking to `/map/new`.)*
 
-- [ ] **10.6** Add inline editing of the map name from the landing page: clicking the name transforms it into an editable text field, with changes autosaved via the debounced mutation pattern from task 8.
-  — *Why: Spec 002 says the map name can be edited from the landing page. Uses the shared autosave infrastructure.*
+- [x] **10.6** Add inline editing of the map name from the landing page: clicking the name transforms it into an editable text field, with changes autosaved via the debounced mutation pattern from task 8.
+  — *Why: Spec 002 says the map name can be edited from the landing page. Uses the shared autosave infrastructure.* *(Implemented in `landing-page.tsx`. Click on map name replaces `<h2>` with an `<input>` using `useDebouncedMutation` (1500ms delay). Enter/blur confirm the edit, Escape cancels and restores original name. Empty names revert on blur. Click on the name prevents Link navigation via `stopPropagation`. Invalidates `map.list` cache on success. 6 new tests in `landing-page.test.tsx`.)*
 
 ### 11. Map View — Radial Layout Canvas (specs: 009, 002)
 > The core visualization; everything interactive happens here. Depends on node CRUD API (task 4) and aggregation (task 7).

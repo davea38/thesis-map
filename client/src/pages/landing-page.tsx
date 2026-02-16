@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useCallback, useRef } from "react";
 import { Link } from "react-router-dom";
 import { Trash2 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import { useDebouncedMutation } from "@/hooks/use-debounced-mutation";
 import { formatRelativeTime } from "@/lib/format-time";
 import { CreateMapDialog } from "@/components/create-map-dialog";
 import { DeleteMapDialog } from "@/components/delete-map-dialog";
@@ -13,6 +14,65 @@ export function LandingPage() {
     id: string;
     name: string;
   } | null>(null);
+  const [editingMapId, setEditingMapId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState("");
+  const editInputRef = useRef<HTMLInputElement>(null);
+  const utils = trpc.useUtils();
+
+  const updateMapMutation = trpc.map.update.useMutation();
+  const debouncedNameUpdate = useDebouncedMutation(updateMapMutation, {
+    delay: 1500,
+    onSuccess: () => {
+      utils.map.list.invalidate();
+    },
+  });
+
+  const startEditing = useCallback(
+    (e: React.MouseEvent, mapId: string, currentName: string) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setEditingMapId(mapId);
+      setEditingName(currentName);
+      requestAnimationFrame(() => {
+        editInputRef.current?.select();
+      });
+    },
+    [],
+  );
+
+  const confirmEdit = useCallback(
+    (originalName: string) => {
+      if (!editingMapId) return;
+      if (!editingName.trim()) {
+        setEditingName(originalName);
+        debouncedNameUpdate.cancel();
+      } else {
+        debouncedNameUpdate.flush();
+      }
+      setEditingMapId(null);
+    },
+    [editingMapId, editingName, debouncedNameUpdate],
+  );
+
+  const cancelEdit = useCallback(
+    (originalName: string) => {
+      setEditingName(originalName);
+      debouncedNameUpdate.cancel();
+      setEditingMapId(null);
+    },
+    [debouncedNameUpdate],
+  );
+
+  const handleNameChange = useCallback(
+    (value: string) => {
+      if (!editingMapId) return;
+      setEditingName(value);
+      if (value.trim()) {
+        debouncedNameUpdate.mutate({ id: editingMapId, name: value.trim() });
+      }
+    },
+    [editingMapId, debouncedNameUpdate],
+  );
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8">
@@ -69,9 +129,41 @@ export function LandingPage() {
               >
                 <div className="flex items-start justify-between gap-4 pr-8">
                   <div className="min-w-0 flex-1">
-                    <h2 className="truncate text-base font-semibold group-hover:text-accent-foreground">
-                      {map.name}
-                    </h2>
+                    {editingMapId === map.id ? (
+                      <input
+                        ref={editInputRef}
+                        type="text"
+                        value={editingName}
+                        onChange={(e) => handleNameChange(e.target.value)}
+                        onBlur={() => confirmEdit(map.name)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            editInputRef.current?.blur();
+                          } else if (e.key === "Escape") {
+                            e.preventDefault();
+                            cancelEdit(map.name);
+                          }
+                        }}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                        }}
+                        className="w-full truncate text-base font-semibold bg-transparent outline-none border-b border-primary"
+                        data-testid={`map-name-input-${map.id}`}
+                        aria-label="Edit map name"
+                        autoFocus
+                      />
+                    ) : (
+                      <h2
+                        className="truncate text-base font-semibold group-hover:text-accent-foreground cursor-text"
+                        onClick={(e) => startEditing(e, map.id, map.name)}
+                        data-testid={`map-name-${map.id}`}
+                        title="Click to edit map name"
+                      >
+                        {map.name}
+                      </h2>
+                    )}
                     <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
                       {map.thesisStatement}
                     </p>
