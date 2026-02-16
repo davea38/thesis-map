@@ -14,16 +14,8 @@ import { PolarityEdge } from "@/components/polarity-edge";
 import { SidePanel } from "@/components/side-panel";
 import { NodeContextMenu } from "@/components/node-context-menu";
 import { DeleteNodeDialog } from "@/components/delete-node-dialog";
+import { DeleteMapDialog } from "@/components/delete-map-dialog";
 import { MapToolbar } from "@/components/map-toolbar";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { useUIStore } from "@/stores/ui-store";
 
 type MapNode = {
@@ -67,15 +59,6 @@ export function MapView() {
     { id: id! },
     { enabled: !!id },
   );
-
-  const utils = trpc.useUtils();
-
-  const deleteMapMutation = trpc.map.delete.useMutation({
-    onSuccess: () => {
-      utils.map.list.invalidate();
-      navigate("/");
-    },
-  });
 
   const { rfNodes: layoutNodes, rfEdges } = useMemo(() => {
     if (!map) return { rfNodes: [], rfEdges: [] };
@@ -156,11 +139,6 @@ export function MapView() {
     [nodeDataMap],
   );
 
-  const handleConfirmDeleteMap = useCallback(() => {
-    if (!id) return;
-    deleteMapMutation.mutate({ id });
-  }, [id, deleteMapMutation]);
-
   if (isLoading) {
     return (
       <div className="flex h-[calc(100vh-3rem)] items-center justify-center">
@@ -227,36 +205,12 @@ export function MapView() {
         nodeId={deleteNodeId}
         onClose={() => setDeleteNodeId(null)}
       />
-      {/* Map deletion confirmation dialog (for root node delete) */}
-      <Dialog open={deleteMapOpen} onOpenChange={setDeleteMapOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete map?</DialogTitle>
-            <DialogDescription>
-              This will permanently delete the map{" "}
-              <strong>&quot;{map?.name}&quot;</strong> and all its nodes, tags,
-              and attachments. This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setDeleteMapOpen(false)}
-              disabled={deleteMapMutation.isPending}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleConfirmDeleteMap}
-              disabled={deleteMapMutation.isPending}
-              data-testid="confirm-delete-map"
-            >
-              {deleteMapMutation.isPending ? "Deleting..." : "Delete map"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <DeleteMapDialog
+        mapId={deleteMapOpen ? id! : null}
+        mapName={map?.name ?? ""}
+        onClose={() => setDeleteMapOpen(false)}
+        onDeleted={() => navigate("/")}
+      />
     </div>
   );
 }

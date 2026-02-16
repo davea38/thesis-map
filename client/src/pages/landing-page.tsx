@@ -1,11 +1,18 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
+import { Trash2 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { formatRelativeTime } from "@/lib/format-time";
 import { CreateMapDialog } from "@/components/create-map-dialog";
+import { DeleteMapDialog } from "@/components/delete-map-dialog";
 import { Button } from "@/components/ui/button";
 
 export function LandingPage() {
   const { data: maps, isLoading, error } = trpc.map.list.useQuery();
+  const [deleteTarget, setDeleteTarget] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8">
@@ -51,28 +58,54 @@ export function LandingPage() {
       {maps && maps.length > 0 && (
         <div className="flex flex-col gap-3">
           {maps.map((map) => (
-            <Link
+            <div
               key={map.id}
-              to={`/map/${map.id}`}
-              className="group rounded-lg border bg-card p-4 transition-colors hover:bg-accent"
+              className="group relative rounded-lg border bg-card transition-colors hover:bg-accent"
             >
-              <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0 flex-1">
-                  <h2 className="truncate text-base font-semibold group-hover:text-accent-foreground">
-                    {map.name}
-                  </h2>
-                  <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
-                    {map.thesisStatement}
-                  </p>
+              <Link
+                to={`/map/${map.id}`}
+                className="block p-4"
+                data-testid={`map-link-${map.id}`}
+              >
+                <div className="flex items-start justify-between gap-4 pr-8">
+                  <div className="min-w-0 flex-1">
+                    <h2 className="truncate text-base font-semibold group-hover:text-accent-foreground">
+                      {map.name}
+                    </h2>
+                    <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
+                      {map.thesisStatement}
+                    </p>
+                  </div>
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    {formatRelativeTime(map.updatedAt)}
+                  </span>
                 </div>
-                <span className="shrink-0 text-xs text-muted-foreground">
-                  {formatRelativeTime(map.updatedAt)}
-                </span>
-              </div>
-            </Link>
+              </Link>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                className="absolute top-2 right-2 opacity-0 transition-opacity group-hover:opacity-100 text-muted-foreground hover:text-destructive"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setDeleteTarget({ id: map.id, name: map.name });
+                }}
+                aria-label={`Delete map "${map.name}"`}
+                data-testid={`delete-map-${map.id}`}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
           ))}
         </div>
       )}
+
+      <DeleteMapDialog
+        mapId={deleteTarget?.id ?? null}
+        mapName={deleteTarget?.name ?? ""}
+        onClose={() => setDeleteTarget(null)}
+        onDeleted={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }
