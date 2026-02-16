@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { render } from "@testing-library/react";
 import { ReactFlowProvider } from "@xyflow/react";
 import { PolarityEdge } from "./polarity-edge";
-import { POLARITY_COLORS, ROOT_NODE_COLOR } from "@/lib/colors";
+import { POLARITY_COLORS, ROOT_NODE_COLOR, FILTERED_DIM_OPACITY } from "@/lib/colors";
 
 /** Convert a hex color like "#22c55e" to "rgb(34, 197, 94)" for JSDOM comparison. */
 function hexToRgb(hex: string): string {
@@ -12,7 +12,7 @@ function hexToRgb(hex: string): string {
   return `rgb(${r}, ${g}, ${b})`;
 }
 
-function makeEdgeProps(childPolarity: string | null, selected = false) {
+function makeEdgeProps(childPolarity: string | null, selected = false, dimmed = false) {
   return {
     id: "edge-1",
     source: "parent",
@@ -23,7 +23,7 @@ function makeEdgeProps(childPolarity: string | null, selected = false) {
     targetY: 100,
     sourcePosition: "bottom" as const,
     targetPosition: "top" as const,
-    data: { childPolarity },
+    data: { childPolarity, dimmed },
     selected,
     animated: false,
     markerEnd: undefined,
@@ -48,8 +48,8 @@ function makeEdgeProps(childPolarity: string | null, selected = false) {
   } as Parameters<typeof PolarityEdge>[0];
 }
 
-function renderEdge(childPolarity: string | null, selected = false) {
-  const props = makeEdgeProps(childPolarity, selected);
+function renderEdge(childPolarity: string | null, selected = false, dimmed = false) {
+  const props = makeEdgeProps(childPolarity, selected, dimmed);
   return render(
     <ReactFlowProvider>
       <svg>
@@ -113,5 +113,36 @@ describe("PolarityEdge", () => {
     const path = container.querySelector("path");
     const style = path?.getAttribute("style") ?? "";
     expect(style).toContain("stroke-width: 1.5");
+  });
+
+  it("reduces opacity when dimmed by tag filter", () => {
+    const { container } = renderEdge("tailwind", false, true);
+    const path = container.querySelector("path");
+    const style = path?.getAttribute("style") ?? "";
+    // Dimmed + unselected: FILTERED_DIM_OPACITY * 0.6
+    const expected = FILTERED_DIM_OPACITY * 0.6;
+    expect(style).toContain(`opacity: ${expected}`);
+  });
+
+  it("uses normal opacity when not dimmed", () => {
+    const { container } = renderEdge("tailwind", false, false);
+    const path = container.querySelector("path");
+    const style = path?.getAttribute("style") ?? "";
+    expect(style).toContain("opacity: 0.6");
+  });
+
+  it("applies dimming even when selected", () => {
+    const { container } = renderEdge("tailwind", true, true);
+    const path = container.querySelector("path");
+    const style = path?.getAttribute("style") ?? "";
+    // Dimmed + selected: FILTERED_DIM_OPACITY * 1
+    expect(style).toContain(`opacity: ${FILTERED_DIM_OPACITY}`);
+  });
+
+  it("includes transition for smooth dimming animation", () => {
+    const { container } = renderEdge("tailwind", false, true);
+    const path = container.querySelector("path");
+    const style = path?.getAttribute("style") ?? "";
+    expect(style).toContain("transition: opacity 0.2s ease");
   });
 });

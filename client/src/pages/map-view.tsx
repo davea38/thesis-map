@@ -9,6 +9,8 @@ import {
 import "@xyflow/react/dist/style.css";
 import { trpc } from "@/lib/trpc";
 import { computeRadialLayout } from "@/lib/radial-layout";
+import { FILTERED_DIM_OPACITY } from "@/lib/colors";
+import { computeDimmedNodeIds } from "@/lib/tag-filter";
 import { ThesisNode } from "@/components/thesis-node";
 import { PolarityEdge } from "@/components/polarity-edge";
 import { SidePanel } from "@/components/side-panel";
@@ -51,6 +53,7 @@ export function MapView() {
   const setInlineEditNodeId = useUIStore((s) => s.setInlineEditNodeId);
   const openContextMenu = useUIStore((s) => s.openContextMenu);
   const closeContextMenu = useUIStore((s) => s.closeContextMenu);
+  const activeTagFilters = useUIStore((s) => s.activeTagFilters);
 
   const [deleteNodeId, setDeleteNodeId] = useState<string | null>(null);
   const [deleteMapOpen, setDeleteMapOpen] = useState(false);
@@ -60,7 +63,7 @@ export function MapView() {
     { enabled: !!id },
   );
 
-  const { rfNodes: layoutNodes, rfEdges } = useMemo(() => {
+  const { rfNodes: layoutNodes, rfEdges: layoutEdges } = useMemo(() => {
     if (!map) return { rfNodes: [], rfEdges: [] };
     return computeRadialLayout(map.nodes as MapNode[]);
   }, [map]);
@@ -86,13 +89,36 @@ export function MapView() {
     return m;
   }, [map]);
 
-  // Sync React Flow's selected state with Zustand store
+  // Determine which nodes should be dimmed by active tag filters.
+  const dimmedNodeIds = useMemo(
+    () => computeDimmedNodeIds(map?.nodes as MapNode[] ?? [], activeTagFilters),
+    [map?.nodes, activeTagFilters],
+  );
+
+  // Apply dimming to edges: an edge is dimmed if either endpoint is dimmed
+  const rfEdges = useMemo(() => {
+    if (activeTagFilters.size === 0) return layoutEdges;
+    return layoutEdges.map((edge) => ({
+      ...edge,
+      data: {
+        ...edge.data,
+        dimmed: dimmedNodeIds.has(edge.source) || dimmedNodeIds.has(edge.target),
+      },
+    }));
+  }, [layoutEdges, activeTagFilters.size, dimmedNodeIds]);
+
+  // Sync React Flow's selected state and dimming with Zustand store
   const rfNodes = useMemo(() => {
     return layoutNodes.map((node) => ({
       ...node,
       selected: node.id === selectedNodeId,
+      style: {
+        ...node.style,
+        opacity: dimmedNodeIds.has(node.id) ? FILTERED_DIM_OPACITY : 1,
+        transition: "opacity 0.2s ease",
+      },
     }));
-  }, [layoutNodes, selectedNodeId]);
+  }, [layoutNodes, selectedNodeId, dimmedNodeIds]);
 
   const onNodeClick: NodeMouseHandler = useCallback(
     (_event, node) => {
