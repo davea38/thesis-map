@@ -2,7 +2,13 @@ import { useEffect, useRef, useCallback, useState } from "react";
 import { X } from "lucide-react";
 import { useUIStore } from "@/stores/ui-store";
 import { trpc } from "@/lib/trpc";
-import { getPolarityColors, POLARITY_COLORS, type Polarity } from "@/lib/colors";
+import {
+  getPolarityColors,
+  POLARITY_COLORS,
+  TAG_COLOR_PALETTE,
+  getContrastText,
+  type Polarity,
+} from "@/lib/colors";
 import { useDebouncedMutation } from "@/hooks/use-debounced-mutation";
 
 export function SidePanel() {
@@ -51,6 +57,14 @@ export function SidePanel() {
   // Polarity editing state
   const [polarityValue, setPolarityValue] = useState<Polarity>("neutral");
 
+  // Tag management state
+  const [tagDropdownOpen, setTagDropdownOpen] = useState(false);
+  const [showNewTagForm, setShowNewTagForm] = useState(false);
+  const [newTagName, setNewTagName] = useState("");
+  const [newTagColor, setNewTagColor] = useState<string>(TAG_COLOR_PALETTE[0]);
+  const [newTagError, setNewTagError] = useState("");
+  const tagDropdownRef = useRef<HTMLDivElement>(null);
+
   // Sync local state with server data when node changes
   useEffect(() => {
     if (nodeData) {
@@ -95,6 +109,44 @@ export function SidePanel() {
     },
   });
 
+  // Tag queries and mutations
+  const { data: mapTags } = trpc.tag.list.useQuery(
+    { mapId: nodeData?.mapId ?? "" },
+    { enabled: !!nodeData?.mapId && sidePanelOpen },
+  );
+
+  const addTagMutation = trpc.tag.addToNode.useMutation({
+    onSuccess: () => {
+      utils.node.getById.invalidate();
+      utils.map.getById.invalidate();
+      utils.tag.list.invalidate();
+    },
+  });
+
+  const removeTagMutation = trpc.tag.removeFromNode.useMutation({
+    onSuccess: () => {
+      utils.node.getById.invalidate();
+      utils.map.getById.invalidate();
+      utils.tag.list.invalidate();
+    },
+  });
+
+  const createTagMutation = trpc.tag.create.useMutation({
+    onSuccess: (tag) => {
+      if (selectedNodeId) {
+        addTagMutation.mutate({ tagId: tag.id, nodeId: selectedNodeId });
+      }
+      utils.tag.list.invalidate();
+      setNewTagName("");
+      setNewTagColor(TAG_COLOR_PALETTE[0]);
+      setNewTagError("");
+      setShowNewTagForm(false);
+    },
+    onError: (err) => {
+      setNewTagError(err.message);
+    },
+  });
+
   const handleStatementChange = useCallback(
     (value: string) => {
       setStatementValue(value);
@@ -135,6 +187,63 @@ export function SidePanel() {
     },
     [selectedNodeId, debouncedPolarityUpdate],
   );
+
+  const handleAddTag = useCallback(
+    (tagId: string) => {
+      if (selectedNodeId) {
+        addTagMutation.mutate({ tagId, nodeId: selectedNodeId });
+      }
+      setTagDropdownOpen(false);
+    },
+    [selectedNodeId, addTagMutation],
+  );
+
+  const handleRemoveTag = useCallback(
+    (tagId: string) => {
+      if (selectedNodeId) {
+        removeTagMutation.mutate({ tagId, nodeId: selectedNodeId });
+      }
+    },
+    [selectedNodeId, removeTagMutation],
+  );
+
+  const handleCreateTag = useCallback(() => {
+    const trimmed = newTagName.trim();
+    if (!trimmed) {
+      setNewTagError("Tag name is required");
+      return;
+    }
+    if (!nodeData?.mapId) return;
+    createTagMutation.mutate({
+      mapId: nodeData.mapId,
+      name: trimmed,
+      color: newTagColor as typeof TAG_COLOR_PALETTE[number],
+    });
+  }, [newTagName, newTagColor, nodeData?.mapId, createTagMutation]);
+
+  // Close tag dropdown on click outside
+  useEffect(() => {
+    if (!tagDropdownOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (tagDropdownRef.current && !tagDropdownRef.current.contains(e.target as Node)) {
+        setTagDropdownOpen(false);
+        setShowNewTagForm(false);
+        setNewTagName("");
+        setNewTagError("");
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [tagDropdownOpen]);
+
+  // Reset tag form state when selected node changes
+  useEffect(() => {
+    setTagDropdownOpen(false);
+    setShowNewTagForm(false);
+    setNewTagName("");
+    setNewTagError("");
+    setNewTagColor(TAG_COLOR_PALETTE[0]);
+  }, [selectedNodeId]);
 
   if (!sidePanelOpen || !selectedNodeId) {
     return null;
@@ -343,21 +452,158 @@ export function SidePanel() {
                 <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
                   Tags
                 </h3>
+
+                {/* Applied tags as removable chips */}
                 {node.tags && node.tags.length > 0 ? (
-                  <div className="flex flex-wrap gap-1.5">
+                  <div className="flex flex-wrap gap-1.5 mb-2" data-testid="applied-tags">
                     {node.tags.map((tag: { id: string; name: string; color: string }) => (
                       <span
                         key={tag.id}
-                        className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
-                        style={{ backgroundColor: tag.color, color: "#fff" }}
+                        className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium"
+                        style={{
+                          backgroundColor: tag.color,
+                          color: getContrastText(tag.color),
+                        }}
+                        data-testid={`tag-chip-${tag.id}`}
                       >
                         {tag.name}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveTag(tag.id)}
+                          className="ml-0.5 rounded-full hover:bg-black/20 transition-colors"
+                          aria-label={`Remove tag ${tag.name}`}
+                          data-testid={`tag-remove-${tag.id}`}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
                       </span>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-muted-foreground">No tags.</p>
+                  <p className="text-sm text-muted-foreground mb-2">No tags.</p>
                 )}
+
+                {/* Add tag dropdown */}
+                <div className="relative" ref={tagDropdownRef}>
+                  <button
+                    type="button"
+                    onClick={() => setTagDropdownOpen(!tagDropdownOpen)}
+                    className="text-xs text-primary hover:text-primary/80 font-medium transition-colors"
+                    data-testid="add-tag-button"
+                  >
+                    + Add tag
+                  </button>
+
+                  {tagDropdownOpen && (() => {
+                    const nodeTags = node.tags ?? [];
+                    const nodeTagIds = new Set(nodeTags.map((t: { id: string }) => t.id));
+                    const availableTags = (mapTags ?? []).filter(
+                      (t: { id: string }) => !nodeTagIds.has(t.id),
+                    );
+
+                    return (
+                      <div
+                        className="absolute left-0 top-full mt-1 z-10 w-64 rounded-md border bg-white shadow-lg"
+                        data-testid="tag-dropdown"
+                      >
+                        {/* Available tags to add */}
+                        {availableTags.length > 0 && (
+                          <div className="max-h-32 overflow-y-auto p-1">
+                            {availableTags.map((tag: { id: string; name: string; color: string }) => (
+                              <button
+                                key={tag.id}
+                                type="button"
+                                onClick={() => handleAddTag(tag.id)}
+                                className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs hover:bg-accent transition-colors"
+                                data-testid={`tag-option-${tag.id}`}
+                              >
+                                <span
+                                  className="h-3 w-3 rounded-full shrink-0"
+                                  style={{ backgroundColor: tag.color }}
+                                />
+                                {tag.name}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+
+                        {availableTags.length === 0 && !showNewTagForm && (
+                          <div className="px-3 py-2 text-xs text-muted-foreground">
+                            No more tags available
+                          </div>
+                        )}
+
+                        {/* Separator */}
+                        <div className="border-t" />
+
+                        {/* Create new tag */}
+                        {!showNewTagForm ? (
+                          <button
+                            type="button"
+                            onClick={() => setShowNewTagForm(true)}
+                            className="w-full px-3 py-2 text-left text-xs text-primary hover:bg-accent transition-colors"
+                            data-testid="create-new-tag-button"
+                          >
+                            + Create new tag
+                          </button>
+                        ) : (
+                          <div className="p-2 space-y-2" data-testid="new-tag-form">
+                            <div className="flex items-center gap-1">
+                              <input
+                                type="text"
+                                value={newTagName}
+                                onChange={(e) => {
+                                  setNewTagName(e.target.value);
+                                  setNewTagError("");
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    e.preventDefault();
+                                    handleCreateTag();
+                                  }
+                                }}
+                                placeholder="Tag name..."
+                                className="flex-1 rounded border border-border px-2 py-1 text-xs outline-none focus:border-ring focus:ring-1 focus:ring-ring"
+                                data-testid="new-tag-name-input"
+                                autoFocus
+                              />
+                              <button
+                                type="button"
+                                onClick={handleCreateTag}
+                                className="rounded bg-primary px-2 py-1 text-xs text-primary-foreground hover:bg-primary/90 transition-colors"
+                                data-testid="new-tag-submit"
+                              >
+                                Add
+                              </button>
+                            </div>
+                            <div className="flex flex-wrap gap-1">
+                              {TAG_COLOR_PALETTE.map((color) => (
+                                <button
+                                  key={color}
+                                  type="button"
+                                  onClick={() => setNewTagColor(color)}
+                                  className="h-5 w-5 rounded-full border-2 transition-transform hover:scale-110"
+                                  style={{
+                                    backgroundColor: color,
+                                    borderColor:
+                                      newTagColor === color ? "#1e293b" : "transparent",
+                                  }}
+                                  title={color}
+                                  data-testid={`new-tag-color-${color}`}
+                                />
+                              ))}
+                            </div>
+                            {newTagError && (
+                              <p className="text-xs text-red-500" data-testid="new-tag-error">
+                                {newTagError}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </div>
               </section>
 
               {/* Attachments section */}

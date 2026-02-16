@@ -53,12 +53,19 @@ const mockNodeWithAggregation = {
   },
 };
 
+const mockMapTags = [
+  { id: "t1", mapId: "map-1", name: "Economic", color: "#3b82f6", nodeCount: 1 },
+  { id: "t2", mapId: "map-1", name: "Technical", color: "#ef4444", nodeCount: 2 },
+  { id: "t3", mapId: "map-1", name: "Political", color: "#22c55e", nodeCount: 0 },
+];
+
 function renderSidePanel(options?: {
   selectedNodeId?: string | null;
   sidePanelOpen?: boolean;
   sidePanelScrollTarget?: string | null;
   nodeData?: typeof mockNode | null;
   nodeQueryKey?: string;
+  mapTags?: typeof mockMapTags | null;
 }) {
   const {
     selectedNodeId = "node-1",
@@ -66,6 +73,7 @@ function renderSidePanel(options?: {
     sidePanelScrollTarget = null,
     nodeData = mockNode,
     nodeQueryKey = selectedNodeId,
+    mapTags = null,
   } = options ?? {};
 
   // Set Zustand state
@@ -87,6 +95,14 @@ function renderSidePanel(options?: {
     );
   }
 
+  // Pre-populate tag.list cache
+  if (mapTags && nodeData?.mapId) {
+    queryClient.setQueryData(
+      [["tag", "list"], { input: { mapId: nodeData.mapId }, type: "query" }],
+      mapTags,
+    );
+  }
+
   const trpcClient = trpc.createClient({
     links: [httpBatchLink({ url: "http://localhost:4000/trpc" })],
   });
@@ -101,7 +117,7 @@ function renderSidePanel(options?: {
     </trpc.Provider>,
   );
 
-  return { ...result, user };
+  return { ...result, user, queryClient };
 }
 
 beforeEach(() => {
@@ -191,10 +207,12 @@ describe("SidePanel", () => {
       expect(screen.getByText(/map thesis.*edits update the map title/)).toBeInTheDocument();
     });
 
-    it("shows tags section with tag chips", () => {
+    it("shows tags section with removable tag chips", () => {
       renderSidePanel({ nodeData: mockNode });
       expect(screen.getByTestId("section-tags")).toBeInTheDocument();
       expect(screen.getByText("Economic")).toBeInTheDocument();
+      expect(screen.getByTestId("tag-chip-t1")).toBeInTheDocument();
+      expect(screen.getByTestId("tag-remove-t1")).toBeInTheDocument();
     });
 
     it("shows 'No tags.' when node has no tags", () => {
@@ -202,6 +220,11 @@ describe("SidePanel", () => {
         nodeData: { ...mockNode, tags: [] },
       });
       expect(screen.getByText("No tags.")).toBeInTheDocument();
+    });
+
+    it("shows the '+ Add tag' button", () => {
+      renderSidePanel({ nodeData: mockNode });
+      expect(screen.getByTestId("add-tag-button")).toBeInTheDocument();
     });
 
     it("shows attachments section with attachment list", () => {
@@ -539,6 +562,184 @@ describe("SidePanel", () => {
       // Don't pre-populate cache so the query stays in loading state
       renderSidePanel({ nodeData: null, nodeQueryKey: undefined });
       expect(screen.getByText("Loading...")).toBeInTheDocument();
+    });
+  });
+
+  describe("tag management", () => {
+    it("renders tag chips with remove buttons for each tag", () => {
+      renderSidePanel({ nodeData: mockNode, mapTags: mockMapTags });
+      const chip = screen.getByTestId("tag-chip-t1");
+      expect(chip).toBeInTheDocument();
+      expect(chip).toHaveTextContent("Economic");
+      const removeBtn = screen.getByTestId("tag-remove-t1");
+      expect(removeBtn).toBeInTheDocument();
+      expect(removeBtn).toHaveAttribute("aria-label", "Remove tag Economic");
+    });
+
+    it("uses contrast text color for tag chips", () => {
+      renderSidePanel({ nodeData: mockNode, mapTags: mockMapTags });
+      const chip = screen.getByTestId("tag-chip-t1");
+      // Blue background (#3b82f6) should get white text (jsdom may return rgb)
+      expect(chip.style.color).toMatch(/^(#ffffff|rgb\(255,\s*255,\s*255\))$/);
+    });
+
+    it("shows '+ Add tag' button", () => {
+      renderSidePanel({ nodeData: mockNode, mapTags: mockMapTags });
+      const btn = screen.getByTestId("add-tag-button");
+      expect(btn).toBeInTheDocument();
+      expect(btn).toHaveTextContent("+ Add tag");
+    });
+
+    it("opens the tag dropdown when '+ Add tag' is clicked", async () => {
+      const { user } = renderSidePanel({ nodeData: mockNode, mapTags: mockMapTags });
+
+      expect(screen.queryByTestId("tag-dropdown")).not.toBeInTheDocument();
+
+      await user.click(screen.getByTestId("add-tag-button"));
+
+      expect(screen.getByTestId("tag-dropdown")).toBeInTheDocument();
+    });
+
+    it("shows available tags (not already on node) in dropdown", async () => {
+      const { user } = renderSidePanel({ nodeData: mockNode, mapTags: mockMapTags });
+
+      await user.click(screen.getByTestId("add-tag-button"));
+
+      // "Economic" (t1) is already on the node, so it should NOT appear
+      expect(screen.queryByTestId("tag-option-t1")).not.toBeInTheDocument();
+      // "Technical" (t2) and "Political" (t3) should appear
+      expect(screen.getByTestId("tag-option-t2")).toBeInTheDocument();
+      expect(screen.getByTestId("tag-option-t3")).toBeInTheDocument();
+    });
+
+    it("shows 'No more tags available' when all tags are applied", async () => {
+      const nodeWithAllTags = {
+        ...mockNode,
+        tags: [
+          { id: "t1", name: "Economic", color: "#3b82f6" },
+          { id: "t2", name: "Technical", color: "#ef4444" },
+          { id: "t3", name: "Political", color: "#22c55e" },
+        ],
+      };
+      const { user } = renderSidePanel({
+        nodeData: nodeWithAllTags,
+        mapTags: mockMapTags,
+      });
+
+      await user.click(screen.getByTestId("add-tag-button"));
+
+      expect(screen.getByText("No more tags available")).toBeInTheDocument();
+    });
+
+    it("shows '+ Create new tag' button in dropdown", async () => {
+      const { user } = renderSidePanel({ nodeData: mockNode, mapTags: mockMapTags });
+
+      await user.click(screen.getByTestId("add-tag-button"));
+
+      expect(screen.getByTestId("create-new-tag-button")).toBeInTheDocument();
+    });
+
+    it("shows new tag form when 'Create new tag' is clicked", async () => {
+      const { user } = renderSidePanel({ nodeData: mockNode, mapTags: mockMapTags });
+
+      await user.click(screen.getByTestId("add-tag-button"));
+      await user.click(screen.getByTestId("create-new-tag-button"));
+
+      expect(screen.getByTestId("new-tag-form")).toBeInTheDocument();
+      expect(screen.getByTestId("new-tag-name-input")).toBeInTheDocument();
+      expect(screen.getByTestId("new-tag-submit")).toBeInTheDocument();
+    });
+
+    it("shows color picker in new tag form with 10 colors", async () => {
+      const { user } = renderSidePanel({ nodeData: mockNode, mapTags: mockMapTags });
+
+      await user.click(screen.getByTestId("add-tag-button"));
+      await user.click(screen.getByTestId("create-new-tag-button"));
+
+      // Should show all 10 color options
+      const colorButtons = screen.getAllByTestId(/^new-tag-color-/);
+      expect(colorButtons).toHaveLength(10);
+    });
+
+    it("shows error when submitting empty tag name", async () => {
+      const { user } = renderSidePanel({ nodeData: mockNode, mapTags: mockMapTags });
+
+      await user.click(screen.getByTestId("add-tag-button"));
+      await user.click(screen.getByTestId("create-new-tag-button"));
+      await user.click(screen.getByTestId("new-tag-submit"));
+
+      expect(screen.getByTestId("new-tag-error")).toBeInTheDocument();
+      expect(screen.getByText("Tag name is required")).toBeInTheDocument();
+    });
+
+    it("closes dropdown when clicking '+ Add tag' again", async () => {
+      const { user } = renderSidePanel({ nodeData: mockNode, mapTags: mockMapTags });
+
+      await user.click(screen.getByTestId("add-tag-button"));
+      expect(screen.getByTestId("tag-dropdown")).toBeInTheDocument();
+
+      await user.click(screen.getByTestId("add-tag-button"));
+      expect(screen.queryByTestId("tag-dropdown")).not.toBeInTheDocument();
+    });
+
+    it("renders remove button with X icon inside each tag chip", () => {
+      const nodeWithMultipleTags = {
+        ...mockNode,
+        tags: [
+          { id: "t1", name: "Economic", color: "#3b82f6" },
+          { id: "t2", name: "Technical", color: "#ef4444" },
+        ],
+      };
+      renderSidePanel({ nodeData: nodeWithMultipleTags, mapTags: mockMapTags });
+
+      expect(screen.getByTestId("tag-remove-t1")).toBeInTheDocument();
+      expect(screen.getByTestId("tag-remove-t2")).toBeInTheDocument();
+      expect(screen.getByLabelText("Remove tag Economic")).toBeInTheDocument();
+      expect(screen.getByLabelText("Remove tag Technical")).toBeInTheDocument();
+    });
+
+    it("shows available tags with color dots in dropdown", async () => {
+      const { user } = renderSidePanel({ nodeData: mockNode, mapTags: mockMapTags });
+
+      await user.click(screen.getByTestId("add-tag-button"));
+
+      const technicalOption = screen.getByTestId("tag-option-t2");
+      expect(technicalOption).toHaveTextContent("Technical");
+      const politicalOption = screen.getByTestId("tag-option-t3");
+      expect(politicalOption).toHaveTextContent("Political");
+    });
+
+    it("clears new tag error when typing in the name input", async () => {
+      const { user } = renderSidePanel({ nodeData: mockNode, mapTags: mockMapTags });
+
+      await user.click(screen.getByTestId("add-tag-button"));
+      await user.click(screen.getByTestId("create-new-tag-button"));
+
+      // Trigger error
+      await user.click(screen.getByTestId("new-tag-submit"));
+      expect(screen.getByTestId("new-tag-error")).toBeInTheDocument();
+
+      // Type to clear error
+      await user.type(screen.getByTestId("new-tag-name-input"), "N");
+      expect(screen.queryByTestId("new-tag-error")).not.toBeInTheDocument();
+    });
+
+    it("highlights selected color in new tag form", async () => {
+      const { user } = renderSidePanel({ nodeData: mockNode, mapTags: mockMapTags });
+
+      await user.click(screen.getByTestId("add-tag-button"));
+      await user.click(screen.getByTestId("create-new-tag-button"));
+
+      // First color should be selected by default (red #ef4444)
+      // jsdom converts hex to rgb, so check for the dark border (#1e293b = rgb(30, 41, 59))
+      const firstColor = screen.getByTestId("new-tag-color-#ef4444");
+      expect(firstColor.style.borderColor).toMatch(/^(#1e293b|rgb\(30,\s*41,\s*59\))$/);
+
+      // Click a different color
+      const blueColor = screen.getByTestId("new-tag-color-#3b82f6");
+      await user.click(blueColor);
+      expect(blueColor.style.borderColor).toMatch(/^(#1e293b|rgb\(30,\s*41,\s*59\))$/);
+      expect(firstColor.style.borderColor).toBe("transparent");
     });
   });
 
