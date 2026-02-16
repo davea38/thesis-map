@@ -133,7 +133,7 @@ describe("useLongPress", () => {
     });
 
     act(() => {
-      result.current.onTouchCancel(createTouchEvent(100, 200));
+      result.current.onTouchCancel();
     });
 
     act(() => {

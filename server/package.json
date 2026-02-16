@@ -9,7 +9,7 @@
     "dev": "bun run --watch src/index.ts",
     "build": "bun build src/index.ts --outdir dist --target bun",
     "test": "vitest run",
-    "lint": "echo 'server lint not yet configured'",
+    "lint": "eslint src/",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",

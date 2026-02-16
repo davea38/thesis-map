@@ -79,7 +79,7 @@ export function useLongPress({
     [clear],
   );
 
-  const onTouchCancel = useCallback((_e: React.TouchEvent) => {
+  const onTouchCancel = useCallback(() => {
     clear();
   }, [clear]);
 

@@ -38,7 +38,7 @@ describe("useDebouncedMutation", () => {
 
   it("debounces mutations — only fires once after delay", () => {
     const mutation = createMockMutation();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const { result } = renderHook(() => useDebouncedMutation(mutation as any, { delay: 500 }));
 
     act(() => {
@@ -64,7 +64,7 @@ describe("useDebouncedMutation", () => {
     const mutation = createMockMutation();
     const onOptimisticUpdate = vi.fn().mockReturnValue("rollback-ctx");
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const { result } = renderHook(() => useDebouncedMutation(mutation as any, {
       delay: 500,
       onOptimisticUpdate,
@@ -83,7 +83,7 @@ describe("useDebouncedMutation", () => {
     const mutation = createMockMutation();
     const onOptimisticUpdate = vi.fn().mockReturnValue("rollback-ctx");
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const { result } = renderHook(() => useDebouncedMutation(mutation as any, {
       delay: 500,
       onOptimisticUpdate,
@@ -105,7 +105,7 @@ describe("useDebouncedMutation", () => {
     const onOptimisticUpdate = vi.fn().mockReturnValue("saved-state");
     const onRollback = vi.fn();
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const { result } = renderHook(() => useDebouncedMutation(mutation as any, {
       delay: 500,
       onOptimisticUpdate,
@@ -132,7 +132,7 @@ describe("useDebouncedMutation", () => {
     const mutation = createMockMutation();
     const onSuccess = vi.fn();
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const { result } = renderHook(() => useDebouncedMutation(mutation as any, {
       delay: 500,
       onSuccess,
@@ -156,7 +156,7 @@ describe("useDebouncedMutation", () => {
   it("flush fires pending mutation immediately", () => {
     const mutation = createMockMutation();
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const { result } = renderHook(() => useDebouncedMutation(mutation as any, { delay: 500 }));
 
     act(() => {
@@ -179,7 +179,7 @@ describe("useDebouncedMutation", () => {
   it("flush does nothing when no mutation is pending", () => {
     const mutation = createMockMutation();
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const { result } = renderHook(() => useDebouncedMutation(mutation as any, { delay: 500 }));
 
     act(() => {
@@ -194,7 +194,7 @@ describe("useDebouncedMutation", () => {
     const onOptimisticUpdate = vi.fn().mockReturnValue("saved-state");
     const onRollback = vi.fn();
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const { result } = renderHook(() => useDebouncedMutation(mutation as any, {
       delay: 500,
       onOptimisticUpdate,
@@ -224,7 +224,7 @@ describe("useDebouncedMutation", () => {
     const mutation = createMockMutation();
     const onRollback = vi.fn();
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const { result } = renderHook(() => useDebouncedMutation(mutation as any, {
       delay: 500,
       onRollback,
@@ -240,7 +240,7 @@ describe("useDebouncedMutation", () => {
   it("cleans up timer on unmount", () => {
     const mutation = createMockMutation();
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const { result, unmount } = renderHook(() => useDebouncedMutation(mutation as any, { delay: 500 }));
 
     act(() => {
@@ -260,7 +260,7 @@ describe("useDebouncedMutation", () => {
   it("uses default delay of 1500ms", () => {
     const mutation = createMockMutation();
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const { result } = renderHook(() => useDebouncedMutation(mutation as any));
 
     act(() => {
@@ -286,7 +286,7 @@ describe("useDebouncedMutation", () => {
     mutation.isError = true;
     mutation.error = new Error("test error") as never;
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const { result } = renderHook(() => useDebouncedMutation(mutation as any));
 
     expect(result.current.isPending).toBe(true);
@@ -298,7 +298,7 @@ describe("useDebouncedMutation", () => {
     const mutation = createMockMutation();
     const onOptimisticUpdate = vi.fn().mockReturnValue("ctx-1");
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const { result } = renderHook(() => useDebouncedMutation(mutation as any, {
       delay: 500,
       onOptimisticUpdate,

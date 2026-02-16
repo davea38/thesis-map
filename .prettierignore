@@ -1,0 +1,4 @@
+dist
+node_modules
+server/src/generated
+bun.lock

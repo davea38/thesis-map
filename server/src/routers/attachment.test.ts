@@ -323,7 +323,7 @@ describe("attachment router", () => {
       mockDb.map.update.mockResolvedValue({} as any);
       mockDb.attachment.findUnique.mockResolvedValue(null);
 
-      const result = await caller.attachment.create({
+      await caller.attachment.create({
         nodeId: "node-1",
         type: "source",
         url: "https://example.com",
