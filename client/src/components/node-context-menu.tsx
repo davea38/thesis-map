@@ -95,12 +95,12 @@ export function NodeContextMenu({
     { enabled: !!contextMenuState },
   );
 
-  // Close menu on click outside
+  // Close menu on click/touch outside
   useEffect(() => {
     if (!contextMenuState) return;
 
-    function handleClick(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+    function handlePointerOutside(e: MouseEvent | TouchEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as HTMLElement)) {
         closeContextMenu();
       }
     }
@@ -111,15 +111,17 @@ export function NodeContextMenu({
       }
     }
 
-    // Use a timeout so the initial right-click event doesn't immediately close
+    // Use a timeout so the initial right-click/long-press event doesn't immediately close
     const timer = setTimeout(() => {
-      document.addEventListener("mousedown", handleClick);
+      document.addEventListener("mousedown", handlePointerOutside);
+      document.addEventListener("touchstart", handlePointerOutside);
       document.addEventListener("keydown", handleKeyDown);
     }, 0);
 
     return () => {
       clearTimeout(timer);
-      document.removeEventListener("mousedown", handleClick);
+      document.removeEventListener("mousedown", handlePointerOutside);
+      document.removeEventListener("touchstart", handlePointerOutside);
       document.removeEventListener("keydown", handleKeyDown);
     };
   }, [contextMenuState, closeContextMenu]);

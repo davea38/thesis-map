@@ -8,6 +8,7 @@ import {
 } from "@/lib/colors";
 import { useUIStore } from "@/stores/ui-store";
 import { trpc } from "@/lib/trpc";
+import { useLongPress } from "@/hooks/use-long-press";
 
 export type ThesisNodeData = Record<string, unknown> & {
   label: string;
@@ -114,6 +115,19 @@ function ThesisNodeComponent({ data, selected }: NodeProps<ThesisNodeType>) {
     [node.id, selectNode, openSidePanel],
   );
 
+  const openContextMenu = useUIStore((s) => s.openContextMenu);
+
+  // Long-press on touch devices opens the context menu (replaces right-click)
+  const longPress = useLongPress({
+    onLongPress: (pos) => {
+      openContextMenu({
+        x: pos.x,
+        y: pos.y,
+        nodeId: node.id,
+      });
+    },
+  });
+
   return (
     <div
       className="relative flex flex-col gap-1 rounded-lg border-2 bg-white px-3 py-2 shadow-sm"
@@ -125,7 +139,12 @@ function ThesisNodeComponent({ data, selected }: NodeProps<ThesisNodeType>) {
         boxShadow: selected
           ? `0 0 0 3px ${SELECTION_RING_COLOR}`
           : undefined,
+        WebkitTouchCallout: "none",
       }}
+      onTouchStart={longPress.onTouchStart}
+      onTouchMove={longPress.onTouchMove}
+      onTouchEnd={longPress.onTouchEnd}
+      onTouchCancel={longPress.onTouchCancel}
     >
       {/* Target handle (incoming edge from parent) */}
       {!isRoot && (

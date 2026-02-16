@@ -282,8 +282,8 @@ The following gaps were identified and addressed in this revision:
 ### 15. Responsive / Touch Support (specs: 009, 010)
 > Ensures the app works on tablets and phones. Depends on the canvas and interaction handlers.
 
-- [ ] **15.1** Implement touch interaction handlers on the canvas: tap to select (triggers same logic as click), long-press (300ms+) to open context menu (replaces right-click), double-tap to activate inline edit, pinch to zoom, two-finger drag to pan.
-  — *Why: Spec 009 requires full touch support. The app must be usable without a mouse.*
+- [x] **15.1** Implement touch interaction handlers on the canvas: tap to select (triggers same logic as click), long-press (300ms+) to open context menu (replaces right-click), double-tap to activate inline edit, pinch to zoom, two-finger drag to pan.
+  — *Why: Spec 009 requires full touch support. The app must be usable without a mouse.* *(Created `useLongPress` hook in `client/src/hooks/use-long-press.ts` — detects touch-hold gesture (300ms, 10px move threshold) and fires callback with touch position. Integrated into `thesis-node.tsx` to open context menu on long-press. React Flow v12 natively handles tap→click, double-tap→dblclick, pinch-to-zoom, and two-finger-drag-to-pan. Context menu's close-on-outside updated to listen for `touchstart` in addition to `mousedown`. Node div uses `WebkitTouchCallout: "none"` to suppress native iOS long-press menu. `touchEnd.preventDefault()` after long-press fires prevents spurious click events. 9 tests in `use-long-press.test.ts`.)*
 
 - [ ] **15.2** Verify touch target sizing: ensure all interactive elements (nodes, context menu items, side panel controls, tag chips, buttons) meet minimum 44x44px touch targets for finger input on small screens.
   — *Why: Spec 009 specifies touch targets are sized for finger input. Small targets make the app unusable on mobile.*
