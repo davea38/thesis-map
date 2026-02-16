@@ -1,4 +1,5 @@
 import { Routes, Route, Link, Outlet } from "react-router-dom";
+import { Toaster } from "sonner";
 import { SaveIndicator } from "@/components/save-indicator";
 import { LandingPage } from "@/pages/landing-page";
 import { MapView } from "@/pages/map-view";
@@ -19,12 +20,15 @@ function RootLayout() {
 
 function App() {
   return (
-    <Routes>
-      <Route element={<RootLayout />}>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/map/:id" element={<MapView />} />
-      </Route>
-    </Routes>
+    <>
+      <Toaster position="bottom-left" duration={5000} />
+      <Routes>
+        <Route element={<RootLayout />}>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/map/:id" element={<MapView />} />
+        </Route>
+      </Routes>
+    </>
   );
 }
 

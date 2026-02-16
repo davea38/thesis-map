@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback, useState } from "react";
 import { X, Plus, Settings } from "lucide-react";
+import { toast } from "sonner";
 import { useUIStore } from "@/stores/ui-store";
 import { trpc } from "@/lib/trpc";
 import {
@@ -719,10 +720,34 @@ function AttachmentsSection({
     },
   });
 
-  const deleteMutation = trpc.attachment.delete.useMutation({
+  const restoreMutation = trpc.attachment.create.useMutation({
     onSuccess: () => {
       utils.node.getById.invalidate();
       utils.map.getById.invalidate();
+    },
+  });
+
+  const deleteMutation = trpc.attachment.delete.useMutation({
+    onSuccess: (deletedAttachment) => {
+      utils.node.getById.invalidate();
+      utils.map.getById.invalidate();
+
+      // Show undo toast for source attachments
+      if (deletedAttachment.type === "source") {
+        toast("Source removed", {
+          action: {
+            label: "Undo",
+            onClick: () => {
+              restoreMutation.mutate({
+                nodeId: deletedAttachment.nodeId,
+                type: "source" as const,
+                url: deletedAttachment.url ?? undefined,
+                noteText: deletedAttachment.noteText ?? undefined,
+              });
+            },
+          },
+        });
+      }
     },
   });
 
