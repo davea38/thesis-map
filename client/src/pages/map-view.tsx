@@ -14,6 +14,7 @@ import { PolarityEdge } from "@/components/polarity-edge";
 import { SidePanel } from "@/components/side-panel";
 import { NodeContextMenu } from "@/components/node-context-menu";
 import { DeleteNodeDialog } from "@/components/delete-node-dialog";
+import { MapToolbar } from "@/components/map-toolbar";
 import {
   Dialog,
   DialogContent,
@@ -195,6 +196,7 @@ export function MapView() {
 
   return (
     <div className="h-[calc(100vh-3rem)] w-full relative">
+      <MapToolbar mapId={map.id} mapName={map.name} />
       <ReactFlow
         nodes={rfNodes}
         edges={rfEdges}
