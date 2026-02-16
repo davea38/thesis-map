@@ -1,6 +1,7 @@
 import { Routes, Route, Link, Outlet } from "react-router-dom";
 import { Toaster } from "sonner";
 import { SaveIndicator } from "@/components/save-indicator";
+import { MutationErrorNotifier } from "@/components/mutation-error-notifier";
 import { LandingPage } from "@/pages/landing-page";
 import { MapView } from "@/pages/map-view";
 
@@ -22,6 +23,7 @@ function App() {
   return (
     <>
       <Toaster position="bottom-left" duration={5000} />
+      <MutationErrorNotifier />
       <Routes>
         <Route element={<RootLayout />}>
           <Route path="/" element={<LandingPage />} />

@@ -7,7 +7,18 @@ import App from "./App";
 import "./index.css";
 
 function Root() {
-  const [queryClient] = useState(() => new QueryClient());
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          mutations: {
+            retry: 3,
+            retryDelay: (attemptIndex) =>
+              Math.min(1000 * 2 ** attemptIndex, 10000),
+          },
+        },
+      }),
+  );
   const [trpcClient] = useState(() => createTRPCClient());
 
   return (
